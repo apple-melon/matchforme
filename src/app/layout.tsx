@@ -15,8 +15,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "대진표 — 대회 참가·토너먼트·리그",
-  description: "참가 코드로 모이는 대회, 토너먼트·리그·예선+본선 대진과 PDF 저장",
+  title: { default: "MATCH FOR ME", template: "%s | MATCH FOR ME" },
+  description: "대회 참가 코드, 토너먼트·리그·예선+본선 대진표와 PDF 저장",
 };
 
 export default function RootLayout({

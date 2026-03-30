@@ -5,13 +5,13 @@ import { ThemeSwitcher } from "@/components/ThemeSwitcher";
 
 export function SiteHeader() {
   return (
-    <header className="sticky top-0 z-40 border-b border-zinc-200/80 bg-background/90 backdrop-blur-md dark:border-zinc-800/80">
+    <header className="sticky top-0 z-40 border-b border-card-border bg-background/95 backdrop-blur-md">
       <div className="mx-auto flex h-12 max-w-5xl items-center justify-between gap-3 px-4">
         <Link
           href="/"
-          className="text-sm font-semibold text-zinc-900 hover:text-amber-700 dark:text-zinc-100 dark:hover:text-amber-400"
+          className="text-sm font-bold tracking-wide text-foreground hover:text-amber-600 dark:hover:text-amber-400"
         >
-          대진표
+          MATCH FOR ME
         </Link>
         <ThemeSwitcher />
       </div>
