@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { parseCollectedFieldsJson } from "@/lib/participant-fields";
+import { getSessionFromCookies } from "@/lib/session";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -46,9 +47,12 @@ export async function POST(req: Request, { params }: Params) {
     return NextResponse.json({ error: "나이를 올바르게 입력해 주세요." }, { status: 400 });
   }
 
+  const session = await getSessionFromCookies();
+
   const p = await prisma.participant.create({
     data: {
       tournamentId: id,
+      userId: session?.sub ?? null,
       name,
       affiliation,
       weightKg: wanted.includes("weightKg") ? weightKg : null,

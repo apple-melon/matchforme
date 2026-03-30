@@ -7,6 +7,16 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model User {
+  id           String         @id @default(cuid())
+  email        String         @unique
+  passwordHash String
+  name         String?
+  createdAt    DateTime       @default(now())
+  tournaments  Tournament[]
+  participants Participant[]
+}
+
 model Tournament {
   id                  String         @id @default(cuid())
   code                String         @unique
@@ -14,17 +24,24 @@ model Tournament {
   title               String         @default("")
   format              String         @default("TOURNAMENT")
   bracketJson         String?
+  matchResultsJson    String?
   collectedFieldsJson String         @default("[]")
   splitClassCount     Int            @default(3)
   seedBy              String         @default("random")
+  ownerId             String?
+  owner               User?          @relation(fields: [ownerId], references: [id], onDelete: SetNull)
   createdAt           DateTime       @default(now())
   participants        Participant[]
+
+  @@index([ownerId])
 }
 
 model Participant {
   id            String     @id @default(cuid())
   tournamentId  String
   tournament    Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  userId        String?
+  user          User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
   name          String
   affiliation   String
   weightKg      Float?
@@ -33,4 +50,5 @@ model Participant {
   createdAt     DateTime   @default(now())
 
   @@index([tournamentId])
+  @@index([userId])
 }

@@ -1,3 +1,5 @@
+import { randomUUID } from "crypto";
+
 export type DrawFormat =
   | "TOURNAMENT"
   | "LEAGUE"
@@ -15,7 +17,7 @@ export type Player = {
   age?: number | null;
 };
 
-export type DrawMatch = { id: string; left: string; right: string };
+export type DrawMatch = { key?: string; id: string; left: string; right: string };
 
 export type DrawRound = { title: string; matches: DrawMatch[] };
 
@@ -421,4 +423,35 @@ export function buildDraw(
     return buildHeightClassTournaments(players, split, seedBy);
   }
   return { error: "알 수 없는 경기 방식입니다." };
+}
+
+/** 각 경기에 고유 key 부여 (결과 기록용). 기존 데이터에 key 없으면 재생성 시 자동 부여 */
+export function assignMatchKeys(data: BracketData): BracketData {
+  const key = () => randomUUID();
+  const mapMatches = (matches: DrawMatch[]): DrawMatch[] =>
+    matches.map((m) => ({ ...m, key: m.key ?? key() }));
+
+  if (data.format === "TOURNAMENT" || data.format === "LEAGUE") {
+    return { ...data, rounds: data.rounds.map((r) => ({ ...r, matches: mapMatches(r.matches) })) };
+  }
+  if (data.format === "LEAGUE_PHASED") {
+    return {
+      ...data,
+      preliminary: data.preliminary.map((g) => ({
+        ...g,
+        rounds: g.rounds.map((r) => ({ ...r, matches: mapMatches(r.matches) })),
+      })),
+      main: data.main.map((r) => ({ ...r, matches: mapMatches(r.matches) })),
+    };
+  }
+  if (data.format === "WEIGHT_CLASS" || data.format === "HEIGHT_CLASS") {
+    return {
+      ...data,
+      groups: data.groups.map((g) => ({
+        ...g,
+        rounds: g.rounds.map((r) => ({ ...r, matches: mapMatches(r.matches) })),
+      })),
+    };
+  }
+  return data;
 }

@@ -1,30 +1,94 @@
 "use client";
 
 import type { BracketData, DrawMatch, DrawRound } from "@/lib/bracket";
+import type { MatchResults } from "@/lib/match-results";
+import { TournamentBracketTree } from "@/components/TournamentBracketTree";
 
-function MatchCard({ m }: { m: DrawMatch }) {
+type ViewProps = {
+  data: BracketData;
+  results?: MatchResults;
+  editable?: boolean;
+  onSetWinner?: (matchKey: string, winner: "left" | "right" | null) => void;
+};
+
+function MatchCard({ m, results, editable, onSetWinner }: { m: DrawMatch } & Omit<ViewProps, "data">) {
+  const r = results ?? {};
+  const k = m.key ?? m.id;
+  const w = r[k];
+
   return (
-    <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
+    <div className="rounded-xl border-2 border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-600 dark:bg-zinc-900">
       <p className="mb-2 text-xs font-medium uppercase tracking-wide text-zinc-500">{m.id}</p>
       <div className="flex flex-col gap-2 text-sm sm:flex-row sm:items-center sm:justify-between">
-        <span className="font-medium text-zinc-900 dark:text-zinc-100">{m.left}</span>
-        <span className="hidden text-zinc-400 sm:inline">VS</span>
+        <span
+          className={`font-medium ${
+            w === "left" ? "rounded-md bg-emerald-500/20 px-2 py-1 text-emerald-900 dark:text-emerald-100" : "text-zinc-900 dark:text-zinc-100"
+          }`}
+        >
+          {m.left}
+        </span>
+        <span className="hidden text-center text-xs font-semibold text-amber-600 sm:inline">VS</span>
         <span className="text-center text-xs font-semibold text-amber-600 sm:hidden">VS</span>
-        <span className="font-medium text-zinc-900 dark:text-zinc-100">{m.right}</span>
+        <span
+          className={`font-medium ${
+            w === "right" ? "rounded-md bg-emerald-500/20 px-2 py-1 text-emerald-900 dark:text-emerald-100" : "text-zinc-900 dark:text-zinc-100"
+          }`}
+        >
+          {m.right}
+        </span>
       </div>
+      {editable && onSetWinner ? (
+        <div className="mt-3 flex flex-wrap gap-1 border-t border-zinc-100 pt-3 dark:border-zinc-700">
+          <button
+            type="button"
+            onClick={() => onSetWinner(k, "left")}
+            className="rounded bg-zinc-100 px-2 py-0.5 text-[11px] font-medium dark:bg-zinc-800"
+          >
+            왼쪽 승
+          </button>
+          <button
+            type="button"
+            onClick={() => onSetWinner(k, "right")}
+            className="rounded bg-zinc-100 px-2 py-0.5 text-[11px] font-medium dark:bg-zinc-800"
+          >
+            오른쪽 승
+          </button>
+          <button
+            type="button"
+            onClick={() => onSetWinner(k, null)}
+            className="rounded border border-zinc-200 px-2 py-0.5 text-[11px] dark:border-zinc-600"
+          >
+            초기화
+          </button>
+        </div>
+      ) : null}
     </div>
   );
 }
 
-function RoundsList({ rounds }: { rounds: DrawRound[] }) {
+function RoundsList({
+  rounds,
+  results,
+  editable,
+  onSetWinner,
+}: {
+  rounds: DrawRound[];
+} & Omit<ViewProps, "data">) {
+  const r = results ?? {};
   return (
     <div className="space-y-8">
-      {rounds.map((r) => (
-        <section key={r.title}>
-          <h3 className="mb-3 text-lg font-semibold text-zinc-800 dark:text-zinc-200">{r.title}</h3>
+      {rounds.map((round) => (
+        <section key={round.title}>
+          <h3 className="mb-3 text-lg font-semibold text-zinc-800 dark:text-zinc-200">{round.title}</h3>
           <div className="grid gap-3 md:grid-cols-2">
-            {r.matches.map((m) => (
-              <MatchCard key={`${r.title}-${m.id}`} m={m} />
+            {round.matches.map((m) => (
+              <MatchCard
+                key={m.key ?? m.id}
+                m={m}
+                results={r}
+                editable={editable}
+                onSetWinner={onSetWinner}
+              />
             ))}
           </div>
         </section>
@@ -33,7 +97,7 @@ function RoundsList({ rounds }: { rounds: DrawRound[] }) {
   );
 }
 
-export function BracketView({ data }: { data: BracketData }) {
+export function BracketView({ data, results = {}, editable, onSetWinner }: ViewProps) {
   if (data.format === "LEAGUE_PHASED") {
     return (
       <div className="space-y-10">
@@ -45,14 +109,14 @@ export function BracketView({ data }: { data: BracketData }) {
                 <p className="mb-2 text-sm text-zinc-600 dark:text-zinc-400">
                   조별 리그 후 A/B조 1위를 정해 본선에 진출합니다.
                 </p>
-                <RoundsList rounds={g.rounds} />
+                <RoundsList rounds={g.rounds} results={results} editable={editable} onSetWinner={onSetWinner} />
               </div>
             ))}
           </div>
         </div>
         <div>
           <h2 className="mb-4 text-xl font-bold text-zinc-900 dark:text-zinc-50">본선</h2>
-          <RoundsList rounds={data.main} />
+          <RoundsList rounds={data.main} results={results} editable={editable} onSetWinner={onSetWinner} />
         </div>
       </div>
     );
@@ -73,12 +137,28 @@ export function BracketView({ data }: { data: BracketData }) {
               {g.unit} ~ {g.maxVal}
               {g.unit}
             </p>
-            <RoundsList rounds={g.rounds} />
+            <TournamentBracketTree
+              rounds={g.rounds}
+              results={results}
+              editable={editable}
+              onSetWinner={onSetWinner}
+            />
           </div>
         ))}
       </div>
     );
   }
 
-  return <RoundsList rounds={data.rounds} />;
+  if (data.format === "TOURNAMENT") {
+    return (
+      <TournamentBracketTree
+        rounds={data.rounds}
+        results={results}
+        editable={editable}
+        onSetWinner={onSetWinner}
+      />
+    );
+  }
+
+  return <RoundsList rounds={data.rounds} results={results} editable={editable} onSetWinner={onSetWinner} />;
 }

@@ -1,9 +1,15 @@
 import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import { prisma } from "@/lib/db";
-import { randomTournamentCode } from "@/lib/tournament-code";
+import { randomNumericTournamentCode } from "@/lib/tournament-code";
+import { getSessionFromCookies } from "@/lib/session";
 
 export async function POST(req: Request) {
+  const session = await getSessionFromCookies();
+  if (!session) {
+    return NextResponse.json({ error: "대회를 만들려면 로그인해 주세요." }, { status: 401 });
+  }
+
   let title = "";
   try {
     const body = (await req.json()) as { title?: string };
@@ -14,11 +20,16 @@ export async function POST(req: Request) {
 
   const adminSecret = randomUUID();
 
-  for (let attempt = 0; attempt < 30; attempt++) {
-    const code = randomTournamentCode(6);
+  for (let attempt = 0; attempt < 40; attempt++) {
+    const code = randomNumericTournamentCode();
     try {
       const t = await prisma.tournament.create({
-        data: { code, adminSecret, title: title || "무제 대회" },
+        data: {
+          code,
+          adminSecret,
+          title: title || "무제 대회",
+          ownerId: session.sub,
+        },
       });
       return NextResponse.json({
         id: t.id,

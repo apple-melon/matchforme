@@ -6,20 +6,17 @@ import {
   serializeCollectedFields,
 } from "@/lib/participant-fields";
 import type { SeedBy } from "@/lib/bracket";
+import { authorizeTournamentManage } from "@/lib/tournament-access";
 
 type Params = { params: Promise<{ id: string }> };
-
-function requireSecret(req: Request, expected: string) {
-  return req.headers.get("x-admin-secret") === expected;
-}
 
 const ALLOWED_SEED: SeedBy[] = ["random", "weightKg", "heightCm"];
 
 export async function PATCH(req: Request, { params }: Params) {
   const { id } = await params;
-  const t = await prisma.tournament.findUnique({ where: { id } });
+  const { auth, tournament: t } = await authorizeTournamentManage(req, id);
   if (!t) return NextResponse.json({ error: "대회를 찾을 수 없습니다." }, { status: 404 });
-  if (!requireSecret(req, t.adminSecret)) {
+  if (!auth.ok) {
     return NextResponse.json({ error: "운영 권한이 없습니다." }, { status: 403 });
   }
 
@@ -72,7 +69,7 @@ export async function PATCH(req: Request, { params }: Params) {
 
   await prisma.tournament.update({
     where: { id },
-    data: { ...data, bracketJson: null },
+    data: { ...data, bracketJson: null, matchResultsJson: null },
   });
 
   return NextResponse.json({ ok: true, ...data });

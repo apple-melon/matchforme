@@ -1,23 +1,23 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { buildDraw, type DrawFormat, type SeedBy } from "@/lib/bracket";
+import { assignMatchKeys, buildDraw, type DrawFormat, type SeedBy } from "@/lib/bracket";
+import { authorizeTournamentManage } from "@/lib/tournament-access";
 
 type Params = { params: Promise<{ id: string }> };
 
-function requireSecret(req: Request, expected: string) {
-  return req.headers.get("x-admin-secret") === expected;
-}
-
 export async function POST(req: Request, { params }: Params) {
   const { id } = await params;
+  const { auth, tournament: t0 } = await authorizeTournamentManage(req, id);
+  if (!t0) return NextResponse.json({ error: "대회를 찾을 수 없습니다." }, { status: 404 });
+  if (!auth.ok) {
+    return NextResponse.json({ error: "운영 권한이 없습니다." }, { status: 403 });
+  }
+
   const t = await prisma.tournament.findUnique({
     where: { id },
     include: { participants: true },
   });
   if (!t) return NextResponse.json({ error: "대회를 찾을 수 없습니다." }, { status: 404 });
-  if (!requireSecret(req, t.adminSecret)) {
-    return NextResponse.json({ error: "운영 권한이 없습니다." }, { status: 403 });
-  }
 
   const format = t.format as DrawFormat;
   const players = t.participants.map((p) => ({
@@ -38,10 +38,12 @@ export async function POST(req: Request, { params }: Params) {
     return NextResponse.json({ error: result.error }, { status: 400 });
   }
 
+  const withKeys = assignMatchKeys(result);
+
   await prisma.tournament.update({
     where: { id },
-    data: { bracketJson: JSON.stringify(result) },
+    data: { bracketJson: JSON.stringify(withKeys), matchResultsJson: null },
   });
 
-  return NextResponse.json({ ok: true, bracket: result });
+  return NextResponse.json({ ok: true, bracket: withKeys });
 }

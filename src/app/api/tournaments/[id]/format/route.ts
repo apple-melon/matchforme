@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import type { DrawFormat } from "@/lib/bracket";
+import { authorizeTournamentManage } from "@/lib/tournament-access";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -12,15 +13,11 @@ const ALLOWED: DrawFormat[] = [
   "HEIGHT_CLASS",
 ];
 
-function requireSecret(req: Request, expected: string) {
-  return req.headers.get("x-admin-secret") === expected;
-}
-
 export async function PATCH(req: Request, { params }: Params) {
   const { id } = await params;
-  const t = await prisma.tournament.findUnique({ where: { id } });
+  const { auth, tournament: t } = await authorizeTournamentManage(req, id);
   if (!t) return NextResponse.json({ error: "대회를 찾을 수 없습니다." }, { status: 404 });
-  if (!requireSecret(req, t.adminSecret)) {
+  if (!auth.ok) {
     return NextResponse.json({ error: "운영 권한이 없습니다." }, { status: 403 });
   }
 
@@ -38,7 +35,7 @@ export async function PATCH(req: Request, { params }: Params) {
 
   await prisma.tournament.update({
     where: { id },
-    data: { format, bracketJson: null },
+    data: { format, bracketJson: null, matchResultsJson: null },
   });
 
   return NextResponse.json({ ok: true, format });

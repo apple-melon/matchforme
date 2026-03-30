@@ -4,6 +4,8 @@ import type { BracketData, DrawFormat, SeedBy } from "@/lib/bracket";
 import { BracketView } from "@/components/BracketView";
 import { PdfExportButton } from "@/components/PdfExportButton";
 import { PARTICIPANT_FIELD_OPTIONS, parseCollectedFieldsJson, type ParticipantFieldKey } from "@/lib/participant-fields";
+import type { MatchResults } from "@/lib/match-results";
+import { parseMatchResultsJson } from "@/lib/match-results";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
@@ -23,9 +25,11 @@ type TournamentPayload = {
   title: string;
   format: string;
   bracketJson: string | null;
+  matchResultsJson: string | null;
   collectedFieldsJson: string;
   splitClassCount: number;
   seedBy: string;
+  isOwner?: boolean;
   participants: Participant[];
 };
 
@@ -57,6 +61,12 @@ function parseBracket(json: string | null): BracketData | null {
   }
 }
 
+function manageHeaders(secret: string | null): HeadersInit {
+  const h: Record<string, string> = {};
+  if (secret) h["x-admin-secret"] = secret;
+  return h;
+}
+
 function ManageShell() {
   return (
     <div className="flex min-h-[40vh] items-center justify-center px-4 text-sm text-zinc-500 dark:text-zinc-400">
@@ -72,6 +82,8 @@ function ManageInner({ tournamentId }: { tournamentId: string }) {
   const [secret, setSecret] = useState<string | null>(null);
   const [data, setData] = useState<TournamentPayload | null>(null);
   const [loadErr, setLoadErr] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [matchResults, setMatchResults] = useState<MatchResults>({});
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [showBracket, setShowBracket] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
@@ -89,23 +101,30 @@ function ManageInner({ tournamentId }: { tournamentId: string }) {
   }, [searchParams, tournamentId, router]);
 
   const fetchData = useCallback(async () => {
-    if (!secret) return;
+    setLoading(true);
     setLoadErr(null);
-    const res = await fetch(`/api/tournaments/${tournamentId}`, {
-      headers: { "x-admin-secret": secret },
-    });
-    const json = (await res.json()) as TournamentPayload & { error?: string };
-    if (!res.ok) {
-      setLoadErr(json.error ?? "불러오지 못했습니다.");
-      setData(null);
-      return;
+    try {
+      const res = await fetch(`/api/tournaments/${tournamentId}`, {
+        credentials: "include",
+        headers: manageHeaders(secret),
+      });
+      const json = (await res.json()) as TournamentPayload & { error?: string };
+      if (!res.ok) {
+        setLoadErr(json.error ?? "불러오지 못했습니다.");
+        setData(null);
+        return;
+      }
+      setData(json);
+      setMatchResults(parseMatchResultsJson(json.matchResultsJson));
+    } finally {
+      setLoading(false);
     }
-    setData(json);
   }, [secret, tournamentId]);
 
   useEffect(() => {
+    if (!clientReady) return;
     void fetchData();
-  }, [fetchData]);
+  }, [clientReady, fetchData]);
 
   const bracket = useMemo(() => parseBracket(data?.bracketJson ?? null), [data?.bracketJson]);
 
@@ -119,10 +138,17 @@ function ManageInner({ tournamentId }: { tournamentId: string }) {
     return `${window.location.origin}/join/${data.code}`;
   }, [data]);
 
+  const publicProgressUrl = useMemo(() => {
+    if (typeof window === "undefined" || !data) return "";
+    return `${window.location.origin}/t/${data.code}`;
+  }, [data]);
+
   const manageBookmarkUrl = useMemo(() => {
     if (typeof window === "undefined" || !secret) return "";
     return `${window.location.origin}/manage/${tournamentId}?k=${encodeURIComponent(secret)}`;
   }, [secret, tournamentId]);
+
+  const canManage = Boolean(data);
 
   async function copyText(text: string) {
     try {
@@ -132,17 +158,61 @@ function ManageInner({ tournamentId }: { tournamentId: string }) {
     }
   }
 
+  async function patchMatch(matchKey: string, winner: "left" | "right" | null) {
+    if (!canManage) return;
+    setBusy("match");
+    try {
+      const res = await fetch(`/api/tournaments/${tournamentId}/matches`, {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json", ...manageHeaders(secret) },
+        body: JSON.stringify({ matchKey, winner }),
+      });
+      const j = (await res.json()) as { error?: string; matchResults?: MatchResults };
+      if (!res.ok) {
+        alert(j.error ?? "저장 실패");
+        return;
+      }
+      if (j.matchResults) setMatchResults(j.matchResults);
+      await fetchData();
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function deleteTournament() {
+    if (!data?.isOwner) return;
+    if (!confirm("이 대회와 모든 참가·대진 데이터가 삭제됩니다. 계속할까요?")) return;
+    setBusy("delT");
+    try {
+      const res = await fetch(`/api/tournaments/${tournamentId}`, {
+        method: "DELETE",
+        credentials: "include",
+        headers: manageHeaders(secret),
+      });
+      const j = (await res.json()) as { error?: string };
+      if (!res.ok) {
+        alert(j.error ?? "삭제 실패");
+        return;
+      }
+      router.push("/my");
+    } finally {
+      setBusy(null);
+    }
+  }
+
   async function patchSettings(partial: {
     collectedFields?: ParticipantFieldKey[];
     splitClassCount?: number;
     seedBy?: SeedBy;
   }) {
-    if (!secret) return;
+    if (!canManage) return;
     setBusy("settings");
     try {
       const res = await fetch(`/api/tournaments/${tournamentId}/settings`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", "x-admin-secret": secret },
+        credentials: "include",
+        headers: { "Content-Type": "application/json", ...manageHeaders(secret) },
         body: JSON.stringify(partial),
       });
       if (!res.ok) {
@@ -157,12 +227,13 @@ function ManageInner({ tournamentId }: { tournamentId: string }) {
   }
 
   async function patchFormat(f: DrawFormat) {
-    if (!secret) return;
+    if (!canManage) return;
     setBusy("format");
     try {
       const res = await fetch(`/api/tournaments/${tournamentId}/format`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", "x-admin-secret": secret },
+        credentials: "include",
+        headers: { "Content-Type": "application/json", ...manageHeaders(secret) },
         body: JSON.stringify({ format: f }),
       });
       if (!res.ok) {
@@ -177,12 +248,13 @@ function ManageInner({ tournamentId }: { tournamentId: string }) {
   }
 
   async function runDraw() {
-    if (!secret) return;
+    if (!canManage) return;
     setBusy("draw");
     try {
       const res = await fetch(`/api/tournaments/${tournamentId}/draw`, {
         method: "POST",
-        headers: { "x-admin-secret": secret },
+        credentials: "include",
+        headers: manageHeaders(secret),
       });
       const j = (await res.json()) as { error?: string };
       if (!res.ok) {
@@ -197,7 +269,7 @@ function ManageInner({ tournamentId }: { tournamentId: string }) {
   }
 
   async function deleteParticipants(all: boolean) {
-    if (!secret || !data) return;
+    if (!canManage || !data) return;
     if (all) {
       if (!confirm("모든 참가자를 삭제할까요? 대진표도 초기화됩니다.")) return;
     } else {
@@ -211,7 +283,8 @@ function ManageInner({ tournamentId }: { tournamentId: string }) {
     try {
       const res = await fetch(`/api/tournaments/${tournamentId}/participants`, {
         method: "DELETE",
-        headers: { "Content-Type": "application/json", "x-admin-secret": secret },
+        credentials: "include",
+        headers: { "Content-Type": "application/json", ...manageHeaders(secret) },
         body: JSON.stringify(all ? { all: true } : { ids: Array.from(selected) }),
       });
       if (!res.ok) {
@@ -244,26 +317,24 @@ function ManageInner({ tournamentId }: { tournamentId: string }) {
     return <ManageShell />;
   }
 
-  if (!secret) {
+  if (loading && !data) {
     return (
-      <div className="mx-auto max-w-lg px-4 py-20 text-center">
-        <h1 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">운영 권한이 필요합니다</h1>
-        <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-          대회를 만들 때 받은 운영 링크(?k= 포함)로 다시 들어오거나, 같은 브라우저에서 대회를 생성한 경우 자동으로
-          인식됩니다.
-        </p>
-        <Link href="/" className="mt-8 inline-block text-amber-600 underline">
-          홈으로
-        </Link>
-      </div>
+      <div className="flex min-h-[40vh] items-center justify-center text-sm text-zinc-500">불러오는 중…</div>
     );
   }
 
   if (loadErr || !data) {
     return (
       <div className="mx-auto max-w-lg px-4 py-20 text-center">
-        <p className="text-sm text-red-600">{loadErr ?? "불러오는 중…"}</p>
-        <Link href="/" className="mt-6 inline-block text-sm underline">
+        <p className="text-sm text-red-600 dark:text-red-400">{loadErr ?? "오류"}</p>
+        <p className="mt-4 text-sm text-zinc-600 dark:text-zinc-400">
+          운영 비밀 링크(?k= 포함)로 들어오거나, 이 대회를 만든 계정으로{" "}
+          <Link href="/login" className="text-amber-600 underline">
+            로그인
+          </Link>
+          한 뒤 &quot;내 대회&quot;에서 다시 열어 주세요.
+        </p>
+        <Link href="/" className="mt-8 inline-block text-sm underline">
           홈으로
         </Link>
       </div>
@@ -272,8 +343,7 @@ function ManageInner({ tournamentId }: { tournamentId: string }) {
 
   const currentFormat = data.format as DrawFormat;
   const seedBy = (data.seedBy === "weightKg" || data.seedBy === "heightCm" ? data.seedBy : "random") as SeedBy;
-  const minPlayers =
-    currentFormat === "WEIGHT_CLASS" || currentFormat === "HEIGHT_CLASS" ? 1 : 2;
+  const minPlayers = currentFormat === "WEIGHT_CLASS" || currentFormat === "HEIGHT_CLASS" ? 1 : 2;
   const canDraw = data.participants.length >= minPlayers;
 
   return (
@@ -294,26 +364,48 @@ function ManageInner({ tournamentId }: { tournamentId: string }) {
               코드 복사
             </button>
           </div>
+          {data.isOwner ? (
+            <p className="mt-2 text-xs text-zinc-500">주최자 계정으로 접속 중입니다.</p>
+          ) : null}
         </div>
         <div className="flex flex-col gap-2 text-right text-sm">
-          <span className="text-zinc-500">참가 링크</span>
+          <span className="text-zinc-500">참가·진행 보기</span>
           <button
             type="button"
             onClick={() => void copyText(joinUrl)}
             className="max-w-xs truncate text-left text-amber-600 underline sm:max-w-md sm:text-right"
             title={joinUrl}
           >
-            {joinUrl || "…"}
+            참가 링크 복사
           </button>
-          <span className="text-zinc-500">운영 링크 (분실 금지)</span>
-          <button
-            type="button"
-            onClick={() => void copyText(manageBookmarkUrl)}
-            className="max-w-xs truncate text-left text-amber-600 underline sm:max-w-md sm:text-right"
-            title={manageBookmarkUrl}
-          >
-            북마크용 복사
-          </button>
+          <Link href={publicProgressUrl || "#"} className="text-amber-600 underline">
+            공개 진행 상황 페이지
+          </Link>
+          {secret ? (
+            <>
+              <span className="text-zinc-500">운영 링크 (분실 금지)</span>
+              <button
+                type="button"
+                onClick={() => void copyText(manageBookmarkUrl)}
+                className="max-w-xs truncate text-left text-amber-600 underline sm:max-w-md sm:text-right"
+                title={manageBookmarkUrl}
+              >
+                북마크용 복사
+              </button>
+            </>
+          ) : (
+            <span className="text-xs text-zinc-500">비밀 운영 링크는 최초 생성 시 저장한 경우에만 복사할 수 있습니다.</span>
+          )}
+          {data.isOwner ? (
+            <button
+              type="button"
+              disabled={Boolean(busy)}
+              onClick={() => void deleteTournament()}
+              className="mt-2 rounded-lg border border-red-300 px-3 py-1.5 text-sm text-red-700 dark:border-red-800 dark:text-red-400"
+            >
+              대회 삭제 (주최자만)
+            </button>
+          ) : null}
         </div>
       </div>
 
@@ -503,16 +595,24 @@ function ManageInner({ tournamentId }: { tournamentId: string }) {
             <PdfExportButton fileName={`${data.title}-대진표`} targetId={PRINT_ID} />
           ) : null}
         </div>
+        <p className="mt-2 text-xs text-zinc-500">
+          대진표에서 각 경기의 승자를 기록하면 참가자·관람 페이지(/t/코드)에도 동일하게 반영됩니다.
+        </p>
 
         {showBracket && bracket ? (
           <div
             id={PRINT_ID}
-            className="mt-6 rounded-2xl border border-zinc-200 bg-white p-6 text-zinc-900 shadow-sm print:border-0"
+            className="mt-6 rounded-2xl border border-zinc-200 bg-white p-6 text-zinc-900 shadow-sm print:border-0 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
           >
             <p className="text-xs text-zinc-500">{data.title}</p>
-            <h2 className="text-xl font-bold">대진표</h2>
+            <h2 className="text-xl font-bold">대진표 · 경기 결과</h2>
             <div className="mt-6">
-              <BracketView data={bracket} />
+              <BracketView
+                data={bracket}
+                results={matchResults}
+                editable
+                onSetWinner={(key, w) => void patchMatch(key, w)}
+              />
             </div>
           </div>
         ) : (

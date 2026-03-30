@@ -1,9 +1,4 @@
-const ALPHANUM = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-
-export function randomTournamentCode(length = 6): string {
-  let out = "";
-  for (let i = 0; i < length; i++) {
-    out += ALPHANUM[Math.floor(Math.random() * ALPHANUM.length)]!;
-  }
-  return out;
+/** 6자리 숫자 참가 코드 (100000–999999) */
+export function randomNumericTournamentCode(): string {
+  return String(100000 + Math.floor(Math.random() * 900000));
 }

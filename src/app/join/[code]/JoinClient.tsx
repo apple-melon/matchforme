@@ -13,9 +13,13 @@ type Info = {
   collectedFieldsJson?: string;
 };
 
+function normalizeCode(raw: string): string {
+  return raw.replace(/\D/g, "").slice(0, 6);
+}
+
 export function JoinClient({ code }: { code: string }) {
   const router = useRouter();
-  const upper = code.trim().toUpperCase();
+  const digits = normalizeCode(code);
   const [info, setInfo] = useState<Info | null>(null);
   const [loadErr, setLoadErr] = useState<string | null>(null);
   const [name, setName] = useState("");
@@ -33,10 +37,14 @@ export function JoinClient({ code }: { code: string }) {
   );
 
   useEffect(() => {
+    if (digits.length !== 6) {
+      setLoadErr("참가 코드는 6자리 숫자여야 합니다.");
+      return;
+    }
     let cancelled = false;
     (async () => {
       setLoadErr(null);
-      const res = await fetch(`/api/tournaments/by-code/${encodeURIComponent(upper)}`);
+      const res = await fetch(`/api/tournaments/by-code/${encodeURIComponent(digits)}`);
       const data = (await res.json()) as Info & { error?: string };
       if (cancelled) return;
       if (!res.ok) {
@@ -48,7 +56,7 @@ export function JoinClient({ code }: { code: string }) {
     return () => {
       cancelled = true;
     };
-  }, [upper]);
+  }, [digits]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -66,6 +74,7 @@ export function JoinClient({ code }: { code: string }) {
 
       const res = await fetch(`/api/tournaments/${info.id}/join`, {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
@@ -78,6 +87,17 @@ export function JoinClient({ code }: { code: string }) {
     } finally {
       setSubmitting(false);
     }
+  }
+
+  if (digits.length !== 6) {
+    return (
+      <div className="mx-auto max-w-md px-4 py-20 text-center">
+        <p className="text-red-600 dark:text-red-400">참가 코드는 6자리 숫자여야 합니다.</p>
+        <Link href="/" className="mt-6 inline-block text-sm font-medium text-amber-600 underline">
+          처음으로
+        </Link>
+      </div>
+    );
   }
 
   if (loadErr) {
@@ -104,13 +124,27 @@ export function JoinClient({ code }: { code: string }) {
         <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
           {info.title} ({info.code})에 등록되었습니다.
         </p>
-        <button
-          type="button"
-          onClick={() => router.push("/")}
-          className="mt-8 rounded-lg bg-amber-500 px-5 py-2 text-sm font-semibold text-zinc-900"
-        >
-          홈으로
-        </button>
+        <p className="mt-4 text-sm text-zinc-500">
+          로그인한 상태로 신청했다면 &quot;내 참가&quot;에서도 진행 상황을 볼 수 있습니다.
+        </p>
+        <div className="mt-8 flex flex-col gap-3">
+          <Link
+            href={`/t/${info.code}`}
+            className="rounded-lg bg-amber-500 px-5 py-2.5 text-sm font-semibold text-zinc-900"
+          >
+            대회 진행 상황 보기
+          </Link>
+          <Link href="/my" className="text-sm text-amber-600 underline">
+            내 대회 · 내 참가
+          </Link>
+          <button
+            type="button"
+            onClick={() => router.push("/")}
+            className="text-sm text-zinc-500 underline"
+          >
+            홈으로
+          </button>
+        </div>
       </div>
     );
   }
