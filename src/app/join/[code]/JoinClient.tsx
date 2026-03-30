@@ -1,10 +1,17 @@
 "use client";
 
+import { PARTICIPANT_FIELD_OPTIONS, parseCollectedFieldsJson } from "@/lib/participant-fields";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
-type Info = { id: string; code: string; title: string; participantCount: number };
+type Info = {
+  id: string;
+  code: string;
+  title: string;
+  participantCount: number;
+  collectedFieldsJson?: string;
+};
 
 export function JoinClient({ code }: { code: string }) {
   const router = useRouter();
@@ -13,9 +20,17 @@ export function JoinClient({ code }: { code: string }) {
   const [loadErr, setLoadErr] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [affiliation, setAffiliation] = useState("");
+  const [weightKg, setWeightKg] = useState("");
+  const [heightCm, setHeightCm] = useState("");
+  const [age, setAge] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
   const [formErr, setFormErr] = useState<string | null>(null);
+
+  const wanted = useMemo(
+    () => parseCollectedFieldsJson(info?.collectedFieldsJson ?? "[]"),
+    [info?.collectedFieldsJson],
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -41,10 +56,18 @@ export function JoinClient({ code }: { code: string }) {
     setFormErr(null);
     setSubmitting(true);
     try {
+      const body: Record<string, unknown> = {
+        name: name.trim(),
+        affiliation: affiliation.trim(),
+      };
+      if (wanted.includes("weightKg")) body.weightKg = Number(weightKg.replace(",", "."));
+      if (wanted.includes("heightCm")) body.heightCm = Number(heightCm.replace(",", "."));
+      if (wanted.includes("age")) body.age = Number(age);
+
       const res = await fetch(`/api/tournaments/${info.id}/join`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: name.trim(), affiliation: affiliation.trim() }),
+        body: JSON.stringify(body),
       });
       const data = (await res.json()) as { error?: string };
       if (!res.ok) {
@@ -98,7 +121,10 @@ export function JoinClient({ code }: { code: string }) {
       <h1 className="mt-2 text-center text-2xl font-bold text-zinc-900 dark:text-zinc-50">{info.title}</h1>
       <p className="mt-1 text-center text-sm text-zinc-500">현재 {info.participantCount}명 신청</p>
 
-      <form onSubmit={(e) => void submit(e)} className="mt-10 space-y-4 rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-950">
+      <form
+        onSubmit={(e) => void submit(e)}
+        className="mt-10 space-y-4 rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-950"
+      >
         <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
           이름
           <input
@@ -117,6 +143,52 @@ export function JoinClient({ code }: { code: string }) {
             className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-600 dark:bg-zinc-900"
           />
         </label>
+        {wanted.includes("weightKg") ? (
+          <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+            {PARTICIPANT_FIELD_OPTIONS.find((o) => o.key === "weightKg")?.label}
+            <input
+              required
+              type="number"
+              inputMode="decimal"
+              min={1}
+              max={500}
+              step={0.1}
+              value={weightKg}
+              onChange={(e) => setWeightKg(e.target.value)}
+              className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-600 dark:bg-zinc-900"
+            />
+          </label>
+        ) : null}
+        {wanted.includes("heightCm") ? (
+          <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+            {PARTICIPANT_FIELD_OPTIONS.find((o) => o.key === "heightCm")?.label}
+            <input
+              required
+              type="number"
+              inputMode="decimal"
+              min={1}
+              max={300}
+              step={0.1}
+              value={heightCm}
+              onChange={(e) => setHeightCm(e.target.value)}
+              className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-600 dark:bg-zinc-900"
+            />
+          </label>
+        ) : null}
+        {wanted.includes("age") ? (
+          <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+            {PARTICIPANT_FIELD_OPTIONS.find((o) => o.key === "age")?.label}
+            <input
+              required
+              type="number"
+              min={0}
+              max={150}
+              value={age}
+              onChange={(e) => setAge(e.target.value)}
+              className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-600 dark:bg-zinc-900"
+            />
+          </label>
+        ) : null}
         {formErr ? <p className="text-sm text-red-600">{formErr}</p> : null}
         <button
           type="submit"

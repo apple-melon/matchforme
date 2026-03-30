@@ -29,10 +29,16 @@ export async function GET(req: Request, { params }: Params) {
     title: t.title,
     format: t.format,
     bracketJson: t.bracketJson,
+    collectedFieldsJson: t.collectedFieldsJson,
+    splitClassCount: t.splitClassCount,
+    seedBy: t.seedBy,
     participants: t.participants.map((p) => ({
       id: p.id,
       name: p.name,
       affiliation: p.affiliation,
+      weightKg: p.weightKg,
+      heightCm: p.heightCm,
+      age: p.age,
       createdAt: p.createdAt,
     })),
   });

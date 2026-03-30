@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { buildDraw, type DrawFormat } from "@/lib/bracket";
+import { buildDraw, type DrawFormat, type SeedBy } from "@/lib/bracket";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -23,9 +23,17 @@ export async function POST(req: Request, { params }: Params) {
   const players = t.participants.map((p) => ({
     name: p.name,
     affiliation: p.affiliation,
+    weightKg: p.weightKg,
+    heightCm: p.heightCm,
+    age: p.age,
   }));
 
-  const result = buildDraw(format, players);
+  const seedBy = (t.seedBy === "weightKg" || t.seedBy === "heightCm" ? t.seedBy : "random") as SeedBy;
+
+  const result = buildDraw(format, players, {
+    splitClassCount: t.splitClassCount,
+    seedBy,
+  });
   if ("error" in result) {
     return NextResponse.json({ error: result.error }, { status: 400 });
   }

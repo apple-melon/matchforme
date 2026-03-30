@@ -8,7 +8,13 @@ export async function GET(_req: Request, { params }: Params) {
   const upper = code.trim().toUpperCase();
   const t = await prisma.tournament.findUnique({
     where: { code: upper },
-    select: { id: true, code: true, title: true, _count: { select: { participants: true } } },
+    select: {
+      id: true,
+      code: true,
+      title: true,
+      collectedFieldsJson: true,
+      _count: { select: { participants: true } },
+    },
   });
   if (!t) {
     return NextResponse.json({ error: "대회를 찾을 수 없습니다." }, { status: 404 });
@@ -18,5 +24,6 @@ export async function GET(_req: Request, { params }: Params) {
     code: t.code,
     title: t.title,
     participantCount: t._count.participants,
+    collectedFieldsJson: t.collectedFieldsJson,
   });
 }

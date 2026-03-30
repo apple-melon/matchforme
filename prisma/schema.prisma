@@ -8,14 +8,17 @@ datasource db {
 }
 
 model Tournament {
-  id           String         @id @default(cuid())
-  code         String         @unique
-  adminSecret  String
-  title        String         @default("")
-  format       String         @default("TOURNAMENT")
-  bracketJson  String?
-  createdAt    DateTime       @default(now())
-  participants Participant[]
+  id                  String         @id @default(cuid())
+  code                String         @unique
+  adminSecret         String
+  title               String         @default("")
+  format              String         @default("TOURNAMENT")
+  bracketJson         String?
+  collectedFieldsJson String         @default("[]")
+  splitClassCount     Int            @default(3)
+  seedBy              String         @default("random")
+  createdAt           DateTime       @default(now())
+  participants        Participant[]
 }
 
 model Participant {
@@ -24,6 +27,9 @@ model Participant {
   tournament    Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
   name          String
   affiliation   String
+  weightKg      Float?
+  heightCm      Float?
+  age           Int?
   createdAt     DateTime   @default(now())
 
   @@index([tournamentId])

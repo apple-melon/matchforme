@@ -58,5 +58,27 @@ export function BracketView({ data }: { data: BracketData }) {
     );
   }
 
+  if (data.format === "WEIGHT_CLASS" || data.format === "HEIGHT_CLASS") {
+    const kind = data.format === "WEIGHT_CLASS" ? "체급(몸무게)" : "키급";
+    return (
+      <div className="space-y-10">
+        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+          {kind} 순으로 정렬한 뒤 {data.groups.length}개 조로 나누어 각 조에서 토너먼트를 진행합니다.
+        </p>
+        {data.groups.map((g) => (
+          <div key={g.label}>
+            <h2 className="mb-2 text-xl font-bold text-zinc-900 dark:text-zinc-50">{g.label}</h2>
+            <p className="mb-4 text-xs text-zinc-500">
+              범위: {g.minVal}
+              {g.unit} ~ {g.maxVal}
+              {g.unit}
+            </p>
+            <RoundsList rounds={g.rounds} />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
   return <RoundsList rounds={data.rounds} />;
 }

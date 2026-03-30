@@ -4,7 +4,13 @@ import type { DrawFormat } from "@/lib/bracket";
 
 type Params = { params: Promise<{ id: string }> };
 
-const ALLOWED: DrawFormat[] = ["TOURNAMENT", "LEAGUE", "LEAGUE_PHASED"];
+const ALLOWED: DrawFormat[] = [
+  "TOURNAMENT",
+  "LEAGUE",
+  "LEAGUE_PHASED",
+  "WEIGHT_CLASS",
+  "HEIGHT_CLASS",
+];
 
 function requireSecret(req: Request, expected: string) {
   return req.headers.get("x-admin-secret") === expected;
