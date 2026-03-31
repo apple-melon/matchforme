@@ -43,10 +43,10 @@ export default function Home() {
           <span className="mt-1 block text-xs text-muted">로그인 후 새 대회 (운영·참가 코드 발급)</span>
         </Link>
         <Link
-          href="/my"
+          href="/profile"
           className="rounded-2xl border border-card-border bg-card p-5 text-center shadow-sm transition hover:border-amber-500/50"
         >
-          <span className="block text-sm font-semibold text-foreground">내 대회 · 내 참가</span>
+          <span className="block text-sm font-semibold text-foreground">프로필</span>
           <span className="mt-1 block text-xs text-muted">주최·참가 목록과 진행 상황</span>
         </Link>
       </section>

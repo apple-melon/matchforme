@@ -7,7 +7,7 @@ import { Suspense, useState } from "react";
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const next = searchParams.get("next") || "/my";
+  const next = searchParams.get("next") || "/profile";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [err, setErr] = useState<string | null>(null);
@@ -24,12 +24,12 @@ function LoginForm() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: email.trim(), password }),
       });
-      const j = (await res.json()) as { error?: string };
+      const j = (await res.json().catch(() => ({}))) as { error?: string };
       if (!res.ok) {
         setErr(j.error ?? "로그인에 실패했습니다.");
         return;
       }
-      router.push(next.startsWith("/") ? next : "/my");
+      router.push(next.startsWith("/") ? next : "/profile");
       router.refresh();
     } finally {
       setBusy(false);

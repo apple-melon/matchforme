@@ -18,13 +18,20 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "이메일과 비밀번호를 입력해 주세요." }, { status: 400 });
   }
 
-  const user = await prisma.user.findUnique({ where: { email } });
-  if (!user || !(await verifyPassword(password, user.passwordHash))) {
-    return NextResponse.json({ error: "이메일 또는 비밀번호가 올바르지 않습니다." }, { status: 401 });
+  try {
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user || !(await verifyPassword(password, user.passwordHash))) {
+      return NextResponse.json({ error: "이메일 또는 비밀번호가 올바르지 않습니다." }, { status: 401 });
+    }
+
+    const token = await signSession(user.id, user.email);
+    await setSessionCookie(token);
+
+    return NextResponse.json({ ok: true, user: { id: user.id, email: user.email, name: user.name } });
+  } catch {
+    return NextResponse.json(
+      { error: "로그인 처리 중 오류가 발생했습니다. DB 마이그레이션 적용 여부를 확인해 주세요." },
+      { status: 500 },
+    );
   }
-
-  const token = await signSession(user.id, user.email);
-  await setSessionCookie(token);
-
-  return NextResponse.json({ ok: true, user: { id: user.id, email: user.email, name: user.name } });
 }

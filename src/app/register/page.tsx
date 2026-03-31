@@ -10,11 +10,13 @@ export default function RegisterPage() {
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [err, setErr] = useState<string | null>(null);
+  const [ok, setOk] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setErr(null);
+    setOk(null);
     setBusy(true);
     try {
       const res = await fetch("/api/auth/register", {
@@ -23,13 +25,16 @@ export default function RegisterPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: email.trim(), password, name: name.trim() || undefined }),
       });
-      const j = (await res.json()) as { error?: string };
+      const j = (await res.json().catch(() => ({}))) as { error?: string };
       if (!res.ok) {
         setErr(j.error ?? "가입에 실패했습니다.");
         return;
       }
-      router.push("/my");
-      router.refresh();
+      setOk("회원가입이 완료되었습니다. 잠시 후 프로필 페이지로 이동합니다.");
+      setTimeout(() => {
+        router.push("/profile");
+        router.refresh();
+      }, 1200);
     } finally {
       setBusy(false);
     }
@@ -72,6 +77,7 @@ export default function RegisterPage() {
           />
         </label>
         {err ? <p className="text-sm text-red-600 dark:text-red-400">{err}</p> : null}
+        {ok ? <p className="text-sm text-emerald-600 dark:text-emerald-400">{ok}</p> : null}
         <button
           type="submit"
           disabled={busy}

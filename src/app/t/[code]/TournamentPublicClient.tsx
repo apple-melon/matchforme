@@ -107,8 +107,8 @@ export function TournamentPublicClient({ code }: { code: string }) {
           참가 신청 페이지
         </Link>
         {" · "}
-        <Link href="/my" className="text-zinc-500 underline">
-          내 대회 · 내 참가
+        <Link href="/profile" className="text-zinc-500 underline">
+          프로필
         </Link>
         {" · "}
         <Link href="/" className="text-zinc-500 underline">

@@ -134,8 +134,8 @@ export function JoinClient({ code }: { code: string }) {
           >
             대회 진행 상황 보기
           </Link>
-          <Link href="/my" className="text-sm text-amber-600 underline">
-            내 대회 · 내 참가
+          <Link href="/profile" className="text-sm text-amber-600 underline">
+            프로필
           </Link>
           <button
             type="button"

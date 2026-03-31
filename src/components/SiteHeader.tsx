@@ -33,8 +33,8 @@ export function SiteHeader() {
           <Link href="/create" className="text-muted hover:text-foreground">
             대회 만들기
           </Link>
-          <Link href="/my" className="text-muted hover:text-foreground">
-            내 대회
+          <Link href="/profile" className="text-muted hover:text-foreground">
+            프로필
           </Link>
           {loggedIn ? null : (
             <Link href="/login" className="font-medium text-amber-600 hover:underline">
