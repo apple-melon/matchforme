@@ -3,10 +3,15 @@
 import type { BracketData, DrawFormat, SeedBy } from "@/lib/bracket";
 import { BracketView } from "@/components/BracketView";
 import { AnimatedSelect } from "@/components/AnimatedSelect";
+import { JoinQrDownloadButton } from "@/components/JoinQrDownloadButton";
 import { PdfExportButton } from "@/components/PdfExportButton";
 import { parseCollectedFieldsJson } from "@/lib/participant-fields";
 import type { MatchResults } from "@/lib/match-results";
-import { parseMatchResultsJson } from "@/lib/match-results";
+import {
+  computeByeAutoResults,
+  parseMatchResultsJson,
+  resolveBracketDisplayData,
+} from "@/lib/match-results";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
@@ -119,7 +124,9 @@ function ManageInner({ tournamentId }: { tournamentId: string }) {
         return;
       }
       setData(json);
-      setMatchResults(parseMatchResultsJson(json.matchResultsJson));
+      const b = parseBracket(json.bracketJson);
+      const raw = parseMatchResultsJson(json.matchResultsJson);
+      setMatchResults(b ? { ...computeByeAutoResults(b), ...raw } : raw);
     } finally {
       setLoading(false);
     }
@@ -141,6 +148,10 @@ function ManageInner({ tournamentId }: { tournamentId: string }) {
   }, [data?.startedAt, data?.bracketJson]);
 
   const bracket = useMemo(() => parseBracket(data?.bracketJson ?? null), [data?.bracketJson]);
+  const displayBracket = useMemo(() => {
+    if (!bracket) return null;
+    return resolveBracketDisplayData(bracket, matchResults);
+  }, [bracket, matchResults]);
 
   const collected = useMemo(
     () => parseCollectedFieldsJson(data?.collectedFieldsJson ?? "[]"),
@@ -182,6 +193,11 @@ function ManageInner({ tournamentId }: { tournamentId: string }) {
       setCopyFeedback("복사에 실패했습니다. 브라우저에서 클립보드 권한을 확인해 주세요.");
       window.setTimeout(() => setCopyFeedback(null), 3500);
     }
+  }
+
+  function showMessage(msg: string) {
+    setCopyFeedback(msg);
+    window.setTimeout(() => setCopyFeedback(null), msg.includes("못했") ? 3500 : 2800);
   }
 
   async function patchMatch(matchKey: string, winner: "left" | "right" | null) {
@@ -412,19 +428,19 @@ function ManageInner({ tournamentId }: { tournamentId: string }) {
   const canDraw = data.participants.length >= minPlayers;
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-10">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-        <div>
+    <div className="mx-auto max-w-4xl px-3 py-6 sm:px-4 sm:py-10">
+      <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+        <div className="min-w-0">
           <p className="text-xs font-medium uppercase text-zinc-500">대회 운영</p>
-          <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">{data.title}</h1>
-          <div className="mt-2 flex flex-wrap items-center gap-2">
-            <span className="rounded-lg bg-zinc-100 px-3 py-1 font-mono text-lg font-bold tracking-widest dark:bg-zinc-800">
+          <h1 className="text-xl font-bold leading-snug text-zinc-900 sm:text-2xl dark:text-zinc-50">{data.title}</h1>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <span className="rounded-lg bg-zinc-100 px-3 py-2 font-mono text-base font-bold tracking-widest sm:text-lg dark:bg-zinc-800">
               {data.code}
             </span>
             <button
               type="button"
-              onClick={() => void copyText(data.code)}
-              className="text-sm text-accent underline"
+              onClick={() => void copyWithNotice(data.code, "참가 코드가 복사되었습니다.")}
+              className="min-h-10 rounded-lg px-2 text-sm text-accent underline sm:min-h-0"
             >
               코드 복사
             </button>
@@ -442,43 +458,62 @@ function ManageInner({ tournamentId }: { tournamentId: string }) {
             </p>
           ) : null}
         </div>
-        <div className="flex flex-col gap-2 text-right text-sm">
-          <span className="text-zinc-500">참가·진행 보기</span>
-          <button
+        <div className="flex min-w-0 flex-col gap-3 rounded-2xl border border-zinc-200 bg-zinc-50/90 p-4 text-sm dark:border-zinc-800 dark:bg-zinc-900/50 sm:max-w-xs sm:border-0 sm:bg-transparent sm:p-0 sm:text-right">
+          <span className="text-left text-sm font-medium text-zinc-700 sm:text-right dark:text-zinc-300">
+            참가·진행 보기
+          </span>
+          <div className="flex flex-col gap-2">
+            <button
               type="button"
               onClick={() => void copyWithNotice(joinUrl, "참가 링크가 복사되었습니다.")}
-              className="max-w-xs truncate text-left text-accent underline sm:max-w-md sm:text-right"
+              className="min-h-11 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2.5 text-left text-sm font-medium text-accent underline decoration-accent/60 underline-offset-2 dark:border-zinc-700 dark:bg-zinc-950 sm:min-h-0 sm:border-0 sm:bg-transparent sm:py-1 sm:text-right"
               title={joinUrl}
             >
               참가 링크 복사
             </button>
-          <Link href={`${publicProgressUrl || "#"}#t-schedule`} className="text-accent underline">
-            공개 페이지 — 경기 순서
-          </Link>
-          <Link href={`${publicProgressUrl || "#"}#t-bracket`} className="text-accent underline">
-            공개 페이지 — 대진표·기록
-          </Link>
+            <JoinQrDownloadButton
+              url={joinUrl}
+              fileBaseName={`${data.title}-${data.code}`}
+              onNotice={showMessage}
+            />
+          </div>
+          <div className="flex flex-col gap-2 border-t border-zinc-200 pt-3 dark:border-zinc-700 sm:border-0 sm:pt-0">
+            <Link
+              href={`${publicProgressUrl || "#"}#t-schedule`}
+              className="min-h-11 inline-flex items-center rounded-lg px-1 py-2 text-accent underline decoration-accent/60 underline-offset-2 sm:min-h-0 sm:justify-end sm:py-0"
+            >
+              공개 페이지 — 경기 순서
+            </Link>
+            <Link
+              href={`${publicProgressUrl || "#"}#t-bracket`}
+              className="min-h-11 inline-flex items-center rounded-lg px-1 py-2 text-accent underline decoration-accent/60 underline-offset-2 sm:min-h-0 sm:justify-end sm:py-0"
+            >
+              공개 페이지 — 대진표·기록
+            </Link>
+          </div>
           {secret ? (
-            <>
-              <span className="text-zinc-500">운영 링크 (분실 금지)</span>
+            <div className="flex flex-col gap-2 border-t border-zinc-200 pt-3 dark:border-zinc-700 sm:border-0 sm:pt-0">
+              <span className="text-left text-xs text-zinc-500 sm:text-right">운영 링크 (분실 금지)</span>
               <button
                 type="button"
                 onClick={() => void copyWithNotice(manageBookmarkUrl, "운영(북마크) 링크가 복사되었습니다.")}
-                className="max-w-xs truncate text-left text-accent underline sm:max-w-md sm:text-right"
+                className="min-h-11 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2.5 text-left text-sm text-accent underline dark:border-zinc-700 dark:bg-zinc-950 sm:min-h-0 sm:border-0 sm:bg-transparent sm:py-1 sm:text-right"
                 title={manageBookmarkUrl}
               >
                 북마크용 복사
               </button>
-            </>
+            </div>
           ) : (
-            <span className="text-xs text-zinc-500">비밀 운영 링크는 최초 생성 시 저장한 경우에만 복사할 수 있습니다.</span>
+            <span className="text-left text-xs text-zinc-500 sm:text-right">
+              비밀 운영 링크는 최초 생성 시 저장한 경우에만 복사할 수 있습니다.
+            </span>
           )}
           {data.isOwner ? (
             <button
               type="button"
               disabled={Boolean(busy)}
               onClick={() => void deleteTournament()}
-              className="mt-2 rounded-lg border border-red-300 px-3 py-1.5 text-sm text-red-700 dark:border-red-800 dark:text-red-400"
+              className="mt-1 min-h-11 w-full rounded-lg border border-red-300 px-3 py-2.5 text-sm text-red-700 sm:mt-2 sm:ml-auto sm:min-h-0 sm:w-auto sm:py-1.5 dark:border-red-800 dark:text-red-400"
             >
               대회 삭제 (주최자만)
             </button>
@@ -495,7 +530,7 @@ function ManageInner({ tournamentId }: { tournamentId: string }) {
         </div>
       ) : null}
 
-      <section className="mt-8 rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-950">
+      <section className="mt-8 rounded-2xl border border-zinc-200 bg-white p-4 sm:p-6 dark:border-zinc-800 dark:bg-zinc-950">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-lg font-semibold">참가자 ({data.participants.length}명)</h2>
@@ -508,7 +543,7 @@ function ManageInner({ tournamentId }: { tournamentId: string }) {
               type="button"
               disabled={Boolean(busy) || Boolean(data.startedAt)}
               onClick={() => void deleteParticipants(false)}
-              className="rounded-lg border border-zinc-300 px-3 py-1.5 text-sm dark:border-zinc-600"
+              className="min-h-10 flex-1 rounded-lg border border-zinc-300 px-3 py-2 text-sm sm:min-h-0 sm:flex-none dark:border-zinc-600"
             >
               선택 삭제
             </button>
@@ -516,60 +551,97 @@ function ManageInner({ tournamentId }: { tournamentId: string }) {
               type="button"
               disabled={Boolean(busy) || Boolean(data.startedAt)}
               onClick={() => void deleteParticipants(true)}
-              className="rounded-lg border border-red-300 px-3 py-1.5 text-sm text-red-700 dark:border-red-800 dark:text-red-400"
+              className="min-h-10 flex-1 rounded-lg border border-red-300 px-3 py-2 text-sm text-red-700 sm:min-h-0 sm:flex-none dark:border-red-800 dark:text-red-400"
             >
               전체 삭제
             </button>
           </div>
         </div>
-        <div className="mt-4 overflow-x-auto rounded-xl border border-zinc-100 dark:border-zinc-800">
-          <table className="w-full min-w-[640px] text-left text-sm">
-            <thead className="bg-zinc-50 text-xs uppercase text-zinc-500 dark:bg-zinc-900">
-              <tr>
-                <th className="w-10 px-3 py-2" />
-                {collected.includes("affiliation") ? <th className="px-3 py-2">소속</th> : null}
-                <th className="px-3 py-2">이름</th>
-                {collected.includes("weightKg") ? <th className="px-3 py-2">몸무게</th> : null}
-                {collected.includes("heightCm") ? <th className="px-3 py-2">키</th> : null}
-                {collected.includes("age") ? <th className="px-3 py-2">나이</th> : null}
-              </tr>
-            </thead>
-            <tbody>
+        {data.participants.length === 0 ? (
+          <p className="mt-4 p-6 text-center text-sm text-zinc-500">아직 참가 신청이 없습니다.</p>
+        ) : (
+          <>
+            <div className="mt-4 space-y-3 sm:hidden">
               {data.participants.map((p) => (
-                <tr key={p.id} className="border-t border-zinc-100 dark:border-zinc-800">
-                  <td className="px-3 py-2">
+                <div
+                  key={p.id}
+                  className="rounded-xl border border-zinc-100 bg-zinc-50/90 p-4 dark:border-zinc-800 dark:bg-zinc-900/40"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="min-w-0 flex-1 space-y-1">
+                      <p className="font-semibold text-zinc-900 dark:text-zinc-50">{p.name}</p>
+                      {collected.includes("affiliation") ? (
+                        <p className="text-sm text-zinc-600 dark:text-zinc-400">{p.affiliation || "—"}</p>
+                      ) : null}
+                      <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-zinc-500">
+                        {collected.includes("weightKg") ? (
+                          <span>몸무게 {p.weightKg != null ? `${p.weightKg}kg` : "—"}</span>
+                        ) : null}
+                        {collected.includes("heightCm") ? (
+                          <span>키 {p.heightCm != null ? `${p.heightCm}cm` : "—"}</span>
+                        ) : null}
+                        {collected.includes("age") ? <span>나이 {p.age != null ? `${p.age}` : "—"}</span> : null}
+                      </div>
+                    </div>
                     <input
                       type="checkbox"
                       checked={selected.has(p.id)}
                       onChange={() => toggle(p.id)}
                       disabled={Boolean(data.startedAt)}
                       aria-label={`${p.name} 선택`}
+                      className="mt-1 h-5 w-5 shrink-0 touch-manipulation"
                     />
-                  </td>
-                  {collected.includes("affiliation") ? (
-                    <td className="px-3 py-2 text-zinc-700 dark:text-zinc-300">{p.affiliation || "—"}</td>
-                  ) : null}
-                  <td className="px-3 py-2 font-medium text-zinc-900 dark:text-zinc-100">{p.name}</td>
-                  {collected.includes("weightKg") ? (
-                    <td className="px-3 py-2 text-zinc-600">{p.weightKg != null ? `${p.weightKg}` : "—"}</td>
-                  ) : null}
-                  {collected.includes("heightCm") ? (
-                    <td className="px-3 py-2 text-zinc-600">{p.heightCm != null ? `${p.heightCm}` : "—"}</td>
-                  ) : null}
-                  {collected.includes("age") ? (
-                    <td className="px-3 py-2 text-zinc-600">{p.age != null ? `${p.age}` : "—"}</td>
-                  ) : null}
-                </tr>
+                  </div>
+                </div>
               ))}
-            </tbody>
-          </table>
-          {data.participants.length === 0 ? (
-            <p className="p-6 text-center text-sm text-zinc-500">아직 참가 신청이 없습니다.</p>
-          ) : null}
-        </div>
+            </div>
+            <div className="mt-4 hidden overflow-x-auto rounded-xl border border-zinc-100 sm:block dark:border-zinc-800">
+              <table className="w-full min-w-[640px] text-left text-sm">
+                <thead className="bg-zinc-50 text-xs uppercase text-zinc-500 dark:bg-zinc-900">
+                  <tr>
+                    <th className="w-10 px-3 py-2" />
+                    {collected.includes("affiliation") ? <th className="px-3 py-2">소속</th> : null}
+                    <th className="px-3 py-2">이름</th>
+                    {collected.includes("weightKg") ? <th className="px-3 py-2">몸무게</th> : null}
+                    {collected.includes("heightCm") ? <th className="px-3 py-2">키</th> : null}
+                    {collected.includes("age") ? <th className="px-3 py-2">나이</th> : null}
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.participants.map((p) => (
+                    <tr key={p.id} className="border-t border-zinc-100 dark:border-zinc-800">
+                      <td className="px-3 py-2">
+                        <input
+                          type="checkbox"
+                          checked={selected.has(p.id)}
+                          onChange={() => toggle(p.id)}
+                          disabled={Boolean(data.startedAt)}
+                          aria-label={`${p.name} 선택`}
+                        />
+                      </td>
+                      {collected.includes("affiliation") ? (
+                        <td className="px-3 py-2 text-zinc-700 dark:text-zinc-300">{p.affiliation || "—"}</td>
+                      ) : null}
+                      <td className="px-3 py-2 font-medium text-zinc-900 dark:text-zinc-100">{p.name}</td>
+                      {collected.includes("weightKg") ? (
+                        <td className="px-3 py-2 text-zinc-600">{p.weightKg != null ? `${p.weightKg}` : "—"}</td>
+                      ) : null}
+                      {collected.includes("heightCm") ? (
+                        <td className="px-3 py-2 text-zinc-600">{p.heightCm != null ? `${p.heightCm}` : "—"}</td>
+                      ) : null}
+                      {collected.includes("age") ? (
+                        <td className="px-3 py-2 text-zinc-600">{p.age != null ? `${p.age}` : "—"}</td>
+                      ) : null}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
       </section>
 
-      <section className="mt-8 rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-950">
+      <section className="mt-8 rounded-2xl border border-zinc-200 bg-white p-4 sm:p-6 dark:border-zinc-800 dark:bg-zinc-950">
         <h2 className="text-lg font-semibold">대진 옵션</h2>
         <p className="mt-1 text-sm text-zinc-500">대진 추첨 시 참가자 배열 순서(시드)를 정합니다.</p>
         <div className="mt-4">
@@ -599,7 +671,7 @@ function ManageInner({ tournamentId }: { tournamentId: string }) {
         </div>
       </section>
 
-      <section className="mt-8 rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-950">
+      <section className="mt-8 rounded-2xl border border-zinc-200 bg-white p-4 sm:p-6 dark:border-zinc-800 dark:bg-zinc-950">
         <h2 className="text-lg font-semibold">경기 운영 방식</h2>
         <p className="mt-1 text-sm text-zinc-500">방식을 고른 뒤 대진 생성으로 매칭합니다.</p>
         <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -655,7 +727,7 @@ function ManageInner({ tournamentId }: { tournamentId: string }) {
           type="button"
           disabled={Boolean(busy) || !canDraw || Boolean(data.startedAt)}
           onClick={() => void runDraw()}
-          className="mt-6 rounded-lg bg-accent px-5 py-2.5 text-sm font-semibold text-accent-fg disabled:opacity-50 hover:brightness-110"
+          className="mt-6 min-h-11 w-full rounded-lg bg-accent px-5 py-2.5 text-sm font-semibold text-accent-fg disabled:opacity-50 hover:brightness-110 sm:min-h-0 sm:w-auto"
         >
           {busy === "draw" ? "대진 생성 중…" : "대진 생성 (매칭)"}
         </button>
@@ -672,12 +744,12 @@ function ManageInner({ tournamentId }: { tournamentId: string }) {
       </section>
 
       <section className="mt-8">
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
           <button
             type="button"
             onClick={() => setShowBracket((v) => !v)}
             disabled={!bracket}
-            className="rounded-lg border border-zinc-300 px-4 py-2 text-sm font-medium disabled:opacity-40 dark:border-zinc-600"
+            className="min-h-11 w-full rounded-lg border border-zinc-300 px-4 py-2.5 text-sm font-medium disabled:opacity-40 sm:min-h-0 sm:w-auto dark:border-zinc-600"
           >
             {showBracket ? "대진표 접기" : "대진표 보기"}
           </button>
@@ -689,7 +761,7 @@ function ManageInner({ tournamentId }: { tournamentId: string }) {
               type="button"
               disabled={Boolean(busy)}
               onClick={() => void startTournament()}
-              className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-500 disabled:opacity-50"
+              className="min-h-11 w-full rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-500 disabled:opacity-50 sm:min-h-0 sm:w-auto"
             >
               {busy === "start" ? "처리 중…" : "대회 시작"}
             </button>
@@ -699,7 +771,7 @@ function ManageInner({ tournamentId }: { tournamentId: string }) {
               type="button"
               disabled={Boolean(busy)}
               onClick={() => void finishTournament()}
-              className="rounded-lg border border-zinc-400 bg-white px-4 py-2 text-sm font-semibold text-zinc-800 hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-500 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
+              className="min-h-11 w-full rounded-lg border border-zinc-400 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-800 hover:bg-zinc-50 disabled:opacity-50 sm:min-h-0 sm:w-auto dark:border-zinc-500 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
             >
               {busy === "finish" ? "처리 중…" : "대회 종료"}
             </button>
@@ -719,7 +791,7 @@ function ManageInner({ tournamentId }: { tournamentId: string }) {
             <h2 className="text-xl font-bold">대진표 (미리보기)</h2>
             <p className="mt-1 text-sm text-zinc-500">대회 시작 후에만 승패를 기록할 수 있습니다.</p>
             <div className="mt-6">
-              <BracketView data={bracket} results={matchResults} editable={false} />
+              <BracketView data={displayBracket ?? bracket} results={matchResults} editable={false} />
             </div>
           </div>
         ) : null}
@@ -736,7 +808,7 @@ function ManageInner({ tournamentId }: { tournamentId: string }) {
             </p>
             <div className="mt-6">
               <BracketView
-                data={bracket}
+                data={displayBracket ?? bracket}
                 results={matchResults}
                 editable={!data.endedAt}
                 onSetWinner={(key, w) => void patchMatch(key, w)}
@@ -750,7 +822,29 @@ function ManageInner({ tournamentId }: { tournamentId: string }) {
         ) : null}
       </section>
 
-      <p className="mt-12 text-center text-sm">
+      <section className="mt-12 border-t border-zinc-200 pt-8 dark:border-zinc-800">
+        {data.isOwner ? (
+          <div className="flex flex-col items-center gap-2">
+            <button
+              type="button"
+              disabled={Boolean(busy)}
+              onClick={() => void deleteTournament()}
+              className="rounded-lg border border-red-300 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950/30"
+            >
+              대회 삭제
+            </button>
+            <p className="text-center text-xs text-zinc-500">
+              주최자 계정으로 로그인한 경우에만 삭제됩니다. 상단 오른쪽에도 동일한 버튼이 있습니다.
+            </p>
+          </div>
+        ) : (
+          <p className="text-center text-xs text-zinc-500">
+            대회 삭제는 이 대회를 만든 계정으로 로그인한 뒤, &quot;내 대회&quot; 또는 운영 페이지에서 주최자 권한으로 진행할 수 있습니다.
+          </p>
+        )}
+      </section>
+
+      <p className="mt-8 text-center text-sm">
         <Link href="/" className="text-zinc-500 underline">
           홈으로
         </Link>

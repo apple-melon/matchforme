@@ -2,7 +2,11 @@
 
 import { BracketView } from "@/components/BracketView";
 import { collectMatchScheduleOrder, type BracketData } from "@/lib/bracket";
-import { parseMatchResultsJson } from "@/lib/match-results";
+import {
+  computeByeAutoResults,
+  parseMatchResultsJson,
+  resolveBracketDisplayData,
+} from "@/lib/match-results";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
@@ -42,10 +46,7 @@ export function TournamentPublicClient({ code }: { code: string }) {
   const [err, setErr] = useState<string | null>(null);
 
   useEffect(() => {
-    if (digits.length !== 6) {
-      setErr("6자리 숫자 코드가 아닙니다.");
-      return;
-    }
+    if (digits.length !== 6) return;
     let cancelled = false;
     (async () => {
       try {
@@ -73,10 +74,18 @@ export function TournamentPublicClient({ code }: { code: string }) {
   }, [digits, data?.id, data?.endedAt]);
 
   const bracket = useMemo(() => parseBracket(data?.bracketJson ?? null), [data?.bracketJson]);
-  const results = useMemo(() => parseMatchResultsJson(data?.matchResultsJson), [data?.matchResultsJson]);
+  const results = useMemo(() => {
+    const raw = parseMatchResultsJson(data?.matchResultsJson);
+    if (!bracket) return raw;
+    return { ...computeByeAutoResults(bracket), ...raw };
+  }, [data?.matchResultsJson, bracket]);
+  const displayBracket = useMemo(() => {
+    if (!bracket) return null;
+    return resolveBracketDisplayData(bracket, results);
+  }, [bracket, results]);
   const scheduleRows = useMemo(
-    () => (bracket ? collectMatchScheduleOrder(bracket) : []),
-    [bracket],
+    () => (displayBracket ? collectMatchScheduleOrder(displayBracket) : []),
+    [displayBracket],
   );
 
   const isBracketTreeFormat = Boolean(
@@ -118,10 +127,12 @@ export function TournamentPublicClient({ code }: { code: string }) {
   const ended = Boolean(data.endedAt);
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-10">
+    <div className="mx-auto max-w-5xl px-3 py-6 sm:px-4 sm:py-10">
       <p className="text-xs font-medium uppercase text-zinc-500">대회 진행 · 관람</p>
       <div className="mt-1 flex flex-wrap items-center gap-2">
-        <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">{data.title}</h1>
+        <h1 className="min-w-0 flex-1 text-xl font-bold leading-snug text-zinc-900 sm:text-2xl dark:text-zinc-50">
+          {data.title}
+        </h1>
         {ended ? (
           <span className="rounded-full bg-zinc-300/90 px-2.5 py-0.5 text-xs font-semibold text-zinc-800 dark:bg-zinc-600 dark:text-zinc-100">
             대회 종료
@@ -173,7 +184,7 @@ export function TournamentPublicClient({ code }: { code: string }) {
           {isBracketTreeFormat ? (
             <section
               id="t-bracket"
-              className="scroll-mt-24 mt-8 rounded-2xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-950"
+              className="scroll-mt-24 mt-8 rounded-2xl border border-zinc-200 bg-white p-4 sm:p-5 dark:border-zinc-800 dark:bg-zinc-950"
             >
               <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">대진표 · 경기 기록</h2>
               <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
@@ -182,7 +193,7 @@ export function TournamentPublicClient({ code }: { code: string }) {
                 입니다.
               </p>
               <div className="mt-4 overflow-x-auto">
-                <BracketView data={bracket} results={results} />
+                <BracketView data={displayBracket ?? bracket} results={results} />
               </div>
             </section>
           ) : null}
@@ -190,7 +201,7 @@ export function TournamentPublicClient({ code }: { code: string }) {
           {scheduleRows.length > 0 ? (
             <section
               id="t-schedule"
-              className="scroll-mt-24 mt-8 rounded-2xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-950"
+              className="scroll-mt-24 mt-8 rounded-2xl border border-zinc-200 bg-white p-4 sm:p-5 dark:border-zinc-800 dark:bg-zinc-950"
             >
               <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">경기 순서</h2>
               <p className="mt-1 text-xs text-zinc-500">
@@ -267,10 +278,10 @@ export function TournamentPublicClient({ code }: { code: string }) {
           {!isBracketTreeFormat ? (
             <div
               id="t-bracket"
-              className="scroll-mt-24 mt-8 rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-950"
+              className="scroll-mt-24 mt-8 rounded-2xl border border-zinc-200 bg-white p-4 sm:p-6 dark:border-zinc-800 dark:bg-zinc-950"
             >
               <h2 className="mb-4 text-lg font-semibold text-zinc-900 dark:text-zinc-50">대회 진행 상황 · 대진표 · 경기 기록</h2>
-              <BracketView data={bracket} results={results} />
+              <BracketView data={displayBracket ?? bracket} results={results} />
             </div>
           ) : null}
         </>

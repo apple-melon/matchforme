@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { assignMatchKeys, buildDraw, type DrawFormat, type SeedBy } from "@/lib/bracket";
+import { computeByeAutoResults } from "@/lib/match-results";
 import { authorizeTournamentManage } from "@/lib/tournament-access";
 
 type Params = { params: Promise<{ id: string }> };
@@ -42,10 +43,14 @@ export async function POST(req: Request, { params }: Params) {
   }
 
   const withKeys = assignMatchKeys(result);
+  const bye = computeByeAutoResults(withKeys);
 
   await prisma.tournament.update({
     where: { id },
-    data: { bracketJson: JSON.stringify(withKeys), matchResultsJson: null },
+    data: {
+      bracketJson: JSON.stringify(withKeys),
+      matchResultsJson: Object.keys(bye).length > 0 ? JSON.stringify(bye) : null,
+    },
   });
 
   return NextResponse.json({ ok: true, bracket: withKeys });

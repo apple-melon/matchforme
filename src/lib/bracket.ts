@@ -58,7 +58,10 @@ function shuffle<T>(arr: T[]): T[] {
 
 /** 대진표에 표시할 문자열 (추가 정보 포함) */
 export function fmt(p: Player): string {
-  const bits: string[] = [`[${p.affiliation}] ${p.name}`];
+  const aff = (p.affiliation ?? "").trim();
+  const name = (p.name ?? "").trim();
+  const base = aff ? `${aff} ${name}`.trim() : name;
+  const bits: string[] = [base || name || "—"];
   if (p.weightKg != null && Number.isFinite(p.weightKg)) bits.push(`${p.weightKg}kg`);
   if (p.heightCm != null && Number.isFinite(p.heightCm)) bits.push(`${p.heightCm}cm`);
   if (p.age != null && Number.isFinite(p.age)) bits.push(`만${p.age}세`);

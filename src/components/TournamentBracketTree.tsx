@@ -2,6 +2,7 @@
 
 import type { DrawMatch, DrawRound } from "@/lib/bracket";
 import type { MatchResults } from "@/lib/match-results";
+import { useEffect, useState } from "react";
 
 type Props = {
   rounds: DrawRound[];
@@ -10,8 +11,10 @@ type Props = {
   onSetWinner?: (matchKey: string, winner: "left" | "right" | null) => void;
 };
 
-const COL_W = 260;
-const CONNECTOR_W = 36;
+const COL_W_DESKTOP = 260;
+const COL_W_MOBILE = 216;
+const CONNECTOR_W_DESKTOP = 36;
+const CONNECTOR_W_MOBILE = 28;
 /** 세로 간격 단위 — 라운드가 깊을수록 1라운드 매치 간 거리가 넓어짐 */
 const UNIT = 42;
 /** 라운드 제목 + 여백 (첫 경기 카드와 겹치지 않게) */
@@ -230,6 +233,18 @@ function ConnectorColumn({
 export function TournamentBracketTree({ rounds, results, editable, onSetWinner }: Props) {
   const R = rounds.length;
   const cardMinH = editable ? 152 : 118;
+  const [narrow, setNarrow] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 639px)");
+    const apply = () => setNarrow(mq.matches);
+    apply();
+    mq.addEventListener("change", apply);
+    return () => mq.removeEventListener("change", apply);
+  }, []);
+
+  const colW = narrow ? COL_W_MOBILE : COL_W_DESKTOP;
+  const connectorW = narrow ? CONNECTOR_W_MOBILE : CONNECTOR_W_DESKTOP;
 
   if (R === 0) {
     return null;
@@ -239,9 +254,9 @@ export function TournamentBracketTree({ rounds, results, editable, onSetWinner }
   const totalH = totalBracketHeight(rounds, centers, cardMinH);
 
   return (
-    <div className="overflow-x-auto pb-4 print:overflow-visible">
+    <div className="overflow-x-auto pb-4 [-webkit-overflow-scrolling:touch] print:overflow-visible">
       <div
-        className="inline-flex min-w-min flex-row flex-nowrap items-stretch rounded-xl border border-zinc-100 bg-zinc-50/50 p-3 dark:border-zinc-800 dark:bg-zinc-950/40 print:border-zinc-300 print:bg-white"
+        className="inline-flex min-w-min flex-row flex-nowrap items-stretch rounded-xl border border-zinc-100 bg-zinc-50/50 p-2 sm:p-3 dark:border-zinc-800 dark:bg-zinc-950/40 print:border-zinc-300 print:bg-white"
         style={{ minHeight: totalH }}
       >
         {rounds.map((round, r) => (
@@ -251,12 +266,12 @@ export function TournamentBracketTree({ rounds, results, editable, onSetWinner }
                 centersFrom={centers[r - 1] ?? []}
                 centersTo={centers[r] ?? []}
                 height={totalH}
-                width={CONNECTOR_W}
+                width={connectorW}
               />
             ) : null}
             <div
               className="relative shrink-0"
-              style={{ width: COL_W, minHeight: totalH, height: totalH }}
+              style={{ width: colW, minHeight: totalH, height: totalH }}
             >
               <p
                 className="absolute left-0 right-0 top-2 z-10 text-center text-[11px] font-bold text-zinc-500 dark:text-zinc-400"
@@ -271,7 +286,7 @@ export function TournamentBracketTree({ rounds, results, editable, onSetWinner }
                   <div
                     key={m.key ?? m.id}
                     className="absolute left-0 right-0"
-                    style={{ top, width: COL_W }}
+                    style={{ top, width: colW }}
                   >
                     <MatchCell
                       m={m}

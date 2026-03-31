@@ -37,26 +37,41 @@ export function PdfExportButton({ fileName, targetId }: Props) {
     }
     setBusy(true);
     try {
-      window.scrollTo(0, 0);
+      if (document.fonts?.ready) await document.fonts.ready;
+      el.scrollIntoView({ block: "nearest", inline: "nearest" });
+      await new Promise<void>((resolve) => {
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+      });
 
       const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
         import("html2canvas"),
         import("jspdf"),
       ]);
 
-      const canvas = await html2canvas(el, {
-        scale: Math.min(2, window.devicePixelRatio > 1 ? 2 : 1.5),
+      const w = Math.ceil(Math.max(el.scrollWidth, el.clientWidth, (el as HTMLElement).offsetWidth));
+      const h = Math.ceil(Math.max(el.scrollHeight, el.clientHeight, (el as HTMLElement).offsetHeight));
+
+      const canvas = await html2canvas(el as HTMLElement, {
+        scale: 2,
         useCORS: true,
-        allowTaint: false,
+        allowTaint: true,
         backgroundColor: "#ffffff",
         logging: false,
+        width: w,
+        height: h,
+        x: 0,
+        y: 0,
         scrollX: 0,
-        scrollY: -window.scrollY,
-        windowWidth: document.documentElement.scrollWidth,
-        windowHeight: document.documentElement.scrollHeight,
+        scrollY: 0,
+        windowWidth: w,
+        windowHeight: h,
+        foreignObjectRendering: false,
         onclone: (clonedDoc) => {
           const box = clonedDoc.getElementById(targetId);
           if (!box) return;
+          box.style.overflow = "visible";
+          box.style.height = "auto";
+          box.style.maxHeight = "none";
           const stack: HTMLElement[] = [box];
           while (stack.length) {
             const n = stack.pop()!;
@@ -65,6 +80,9 @@ export function PdfExportButton({ fileName, targetId }: Props) {
             n.style.setProperty("background-color", "#ffffff", "important");
             n.style.setProperty("color", "#18181b", "important");
             n.style.setProperty("border-color", "#d4d4d8", "important");
+            if (n instanceof HTMLElement && n.classList.contains("overflow-x-auto")) {
+              n.style.overflow = "visible";
+            }
             for (let i = 0; i < n.children.length; i++) {
               const c = n.children[i];
               if (c instanceof HTMLElement) stack.push(c);
@@ -77,7 +95,7 @@ export function PdfExportButton({ fileName, targetId }: Props) {
         throw new Error("캔버스가 비어 있습니다.");
       }
 
-      const img = canvas.toDataURL("image/png");
+      const img = canvas.toDataURL("image/png", 1.0);
       const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
 
       addImageMultiPage(pdf, img, canvas.width, canvas.height);
@@ -99,7 +117,7 @@ export function PdfExportButton({ fileName, targetId }: Props) {
       type="button"
       onClick={() => void download()}
       disabled={busy}
-      className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-60 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"
+      className="min-h-11 w-full rounded-lg bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-60 sm:min-h-0 sm:w-auto dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"
     >
       {busy ? "PDF 생성 중…" : "PDF로 다운로드"}
     </button>

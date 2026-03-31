@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import type { BracketData } from "@/lib/bracket";
+import { computeByeAutoResults, parseMatchResultsJson } from "@/lib/match-results";
 import { authorizeTournamentManage } from "@/lib/tournament-access";
 
 type Params = { params: Promise<{ id: string }> };
@@ -20,9 +22,23 @@ export async function POST(req: Request, { params }: Params) {
     return NextResponse.json({ error: "이미 시작된 대회입니다." }, { status: 400 });
   }
 
+  let bracket: BracketData;
+  try {
+    bracket = JSON.parse(t.bracketJson) as BracketData;
+  } catch {
+    return NextResponse.json({ error: "대진 데이터가 손상되었습니다." }, { status: 500 });
+  }
+  const existing = parseMatchResultsJson(t.matchResultsJson);
+  const bye = computeByeAutoResults(bracket);
+  const mergedResults = { ...bye, ...existing };
+
   const updated = await prisma.tournament.update({
     where: { id },
-    data: { startedAt: new Date() },
+    data: {
+      startedAt: new Date(),
+      matchResultsJson:
+        Object.keys(mergedResults).length > 0 ? JSON.stringify(mergedResults) : null,
+    },
     select: { startedAt: true },
   });
 

@@ -2,7 +2,12 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import type { BracketData } from "@/lib/bracket";
 import { authorizeTournamentManage } from "@/lib/tournament-access";
-import { collectMatchKeys, parseMatchResultsJson, type MatchResults } from "@/lib/match-results";
+import {
+  collectMatchKeys,
+  computeByeAutoResults,
+  parseMatchResultsJson,
+  type MatchResults,
+} from "@/lib/match-results";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -58,11 +63,13 @@ export async function PATCH(req: Request, { params }: Params) {
   } else {
     next[body.matchKey] = body.winner;
   }
+  const bye = computeByeAutoResults(bracket);
+  const merged: MatchResults = { ...bye, ...next };
 
   await prisma.tournament.update({
     where: { id },
-    data: { matchResultsJson: JSON.stringify(next) },
+    data: { matchResultsJson: JSON.stringify(merged) },
   });
 
-  return NextResponse.json({ ok: true, matchResults: next });
+  return NextResponse.json({ ok: true, matchResults: merged });
 }

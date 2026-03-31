@@ -140,6 +140,16 @@ body {
   animation: ui-fade-in 0.28s ease-out both;
 }
 
+/* 모바일: 탭 반응 지연 완화 */
+@media (max-width: 639px) {
+  button,
+  a[href],
+  input[type="checkbox"],
+  [role="button"] {
+    touch-action: manipulation;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .ui-page-content,
   .ui-motion-enter,

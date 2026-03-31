@@ -173,14 +173,16 @@ export function JoinClient({ code }: { code: string }) {
   }
 
   return (
-    <div className="mx-auto max-w-md px-4 py-12">
+    <div className="mx-auto max-w-md px-3 py-8 sm:px-4 sm:py-12">
       <p className="text-center text-xs font-medium uppercase tracking-wider text-zinc-500">참가 코드 {info.code}</p>
-      <h1 className="mt-2 text-center text-2xl font-bold text-zinc-900 dark:text-zinc-50">{info.title}</h1>
+      <h1 className="mt-2 text-center text-xl font-bold leading-snug text-zinc-900 sm:text-2xl dark:text-zinc-50">
+        {info.title}
+      </h1>
       <p className="mt-1 text-center text-sm text-zinc-500">현재 {info.participantCount}명 신청</p>
 
       <form
         onSubmit={(e) => void submit(e)}
-        className="mt-10 space-y-4 rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-950"
+        className="mt-10 space-y-4 rounded-2xl border border-zinc-200 bg-white p-4 sm:p-6 dark:border-zinc-800 dark:bg-zinc-950"
       >
         <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
           이름
@@ -188,7 +190,7 @@ export function JoinClient({ code }: { code: string }) {
             required
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-600 dark:bg-zinc-900"
+            className="mt-1 min-h-11 w-full rounded-lg border border-zinc-300 px-3 py-2 text-base dark:border-zinc-600 dark:bg-zinc-900"
           />
         </label>
         {wanted.includes("affiliation") ? (
@@ -198,7 +200,7 @@ export function JoinClient({ code }: { code: string }) {
               required
               value={affiliation}
               onChange={(e) => setAffiliation(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-600 dark:bg-zinc-900"
+              className="mt-1 min-h-11 w-full rounded-lg border border-zinc-300 px-3 py-2 text-base dark:border-zinc-600 dark:bg-zinc-900"
             />
           </label>
         ) : null}
@@ -214,7 +216,7 @@ export function JoinClient({ code }: { code: string }) {
               step={0.1}
               value={weightKg}
               onChange={(e) => setWeightKg(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-600 dark:bg-zinc-900"
+              className="mt-1 min-h-11 w-full rounded-lg border border-zinc-300 px-3 py-2 text-base dark:border-zinc-600 dark:bg-zinc-900"
             />
           </label>
         ) : null}
@@ -230,7 +232,7 @@ export function JoinClient({ code }: { code: string }) {
               step={0.1}
               value={heightCm}
               onChange={(e) => setHeightCm(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-600 dark:bg-zinc-900"
+              className="mt-1 min-h-11 w-full rounded-lg border border-zinc-300 px-3 py-2 text-base dark:border-zinc-600 dark:bg-zinc-900"
             />
           </label>
         ) : null}
@@ -244,7 +246,7 @@ export function JoinClient({ code }: { code: string }) {
               max={150}
               value={age}
               onChange={(e) => setAge(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-600 dark:bg-zinc-900"
+              className="mt-1 min-h-11 w-full rounded-lg border border-zinc-300 px-3 py-2 text-base dark:border-zinc-600 dark:bg-zinc-900"
             />
           </label>
         ) : null}
@@ -252,7 +254,7 @@ export function JoinClient({ code }: { code: string }) {
         <button
           type="submit"
           disabled={submitting}
-          className="w-full rounded-lg bg-accent py-2.5 text-sm font-semibold text-accent-fg disabled:opacity-60 hover:brightness-110"
+          className="min-h-12 w-full rounded-lg bg-accent py-3 text-base font-semibold text-accent-fg disabled:opacity-60 hover:brightness-110 sm:min-h-0 sm:py-2.5 sm:text-sm"
         >
           {submitting ? "전송 중…" : "참가 신청"}
         </button>

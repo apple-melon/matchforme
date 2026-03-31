@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Providers } from "@/components/Providers";
 import { SiteFooter } from "@/components/SiteFooter";
@@ -20,6 +20,17 @@ export const metadata: Metadata = {
   description: "대회 참가 코드, 토너먼트·리그·예선+본선 대진표와 PDF 저장",
 };
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+  viewportFit: "cover",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#fafafa" },
+    { media: "(prefers-color-scheme: dark)", color: "#09090b" },
+  ],
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -31,10 +42,10 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
-      <body className="bg-background text-foreground flex min-h-full flex-col">
+      <body className="bg-background text-foreground flex min-h-full flex-col pb-[env(safe-area-inset-bottom,0px)] pl-[env(safe-area-inset-left,0px)] pr-[env(safe-area-inset-right,0px)]">
         <Providers>
           <SiteHeader />
-          <div className="ui-page-content flex flex-1 flex-col">{children}</div>
+          <div className="ui-page-content flex min-h-full flex-col">{children}</div>
           <SiteFooter />
         </Providers>
       </body>
