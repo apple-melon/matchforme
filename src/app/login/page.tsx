@@ -37,10 +37,13 @@ function LoginForm() {
   }
 
   return (
-    <div className="mx-auto max-w-md px-4 py-16">
+    <div className="ui-motion-enter mx-auto max-w-md px-4 py-16">
       <h1 className="text-2xl font-bold text-foreground">로그인</h1>
       <p className="mt-1 text-sm text-muted">주최한 대회를 다시 열거나, 참가한 대회 진행을 보려면 로그인하세요.</p>
-      <form onSubmit={(e) => void submit(e)} className="mt-8 space-y-4 rounded-2xl border border-card-border bg-card p-6">
+      <form
+        onSubmit={(e) => void submit(e)}
+        className="ui-motion-enter ui-motion-delay-1 mt-8 space-y-4 rounded-2xl border border-card-border bg-card p-6 shadow-sm transition-[box-shadow] duration-300 hover:shadow-md"
+      >
         <label className="block text-sm font-medium">
           이메일
           <input
@@ -49,7 +52,7 @@ function LoginForm() {
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-card-border bg-background px-3 py-2 outline-none ring-amber-500/40 focus:ring-2"
+            className="mt-1 w-full rounded-lg border border-card-border bg-background px-3 py-2 outline-none ring-amber-500/40 transition-[border-color,box-shadow] duration-200 focus:ring-2"
           />
         </label>
         <label className="block text-sm font-medium">
@@ -60,21 +63,21 @@ function LoginForm() {
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-card-border bg-background px-3 py-2 outline-none ring-amber-500/40 focus:ring-2"
+            className="mt-1 w-full rounded-lg border border-card-border bg-background px-3 py-2 outline-none ring-amber-500/40 transition-[border-color,box-shadow] duration-200 focus:ring-2"
           />
         </label>
-        {err ? <p className="text-sm text-red-600 dark:text-red-400">{err}</p> : null}
+        {err ? <p className="ui-fade-quick text-sm text-red-600 dark:text-red-400">{err}</p> : null}
         <button
           type="submit"
           disabled={busy}
-          className="w-full rounded-lg bg-amber-500 py-2.5 text-sm font-semibold text-zinc-900 disabled:opacity-60"
+          className="w-full rounded-lg bg-amber-500 py-2.5 text-sm font-semibold text-zinc-900 transition-[transform,filter,opacity] duration-200 hover:brightness-105 active:scale-[0.99] disabled:opacity-60"
         >
           {busy ? "처리 중…" : "로그인"}
         </button>
       </form>
       <p className="mt-6 text-center text-sm text-muted">
         계정이 없으면{" "}
-        <Link href="/register" className="text-amber-600 underline">
+        <Link href="/register" className="text-amber-600 underline transition-colors duration-200 hover:text-amber-500">
           회원가입
         </Link>
       </p>

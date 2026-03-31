@@ -34,7 +34,7 @@ export default function RootLayout({
       <body className="bg-background text-foreground flex min-h-full flex-col">
         <Providers>
           <SiteHeader />
-          <div className="flex flex-1 flex-col">{children}</div>
+          <div className="ui-page-content flex flex-1 flex-col">{children}</div>
           <SiteFooter />
         </Providers>
       </body>

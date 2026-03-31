@@ -36,3 +36,106 @@ body {
   line-height: 1.55;
   -webkit-font-smoothing: antialiased;
 }
+
+/* 부드러운 UI 모션 (과하지 않게) */
+@keyframes ui-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes ui-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes ui-header-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.ui-ease-out {
+  transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* 페이지 본문: 라우트 전환 시 아주 약한 페이드 */
+.ui-page-content {
+  animation: ui-fade-in 0.35s ease-out both;
+}
+
+/* 블록 등장 (홈 등에서 스태거용) */
+.ui-motion-enter {
+  animation: ui-fade-up 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.ui-motion-delay-1 {
+  animation-delay: 0.06s;
+}
+.ui-motion-delay-2 {
+  animation-delay: 0.12s;
+}
+.ui-motion-delay-3 {
+  animation-delay: 0.18s;
+}
+.ui-motion-delay-4 {
+  animation-delay: 0.24s;
+}
+.ui-motion-delay-5 {
+  animation-delay: 0.3s;
+}
+
+.ui-header-animate {
+  animation: ui-header-in 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* 카드·링크 호버: 살짝 떠오름 */
+.ui-card-lift {
+  transition:
+    transform 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.25s ease;
+}
+.ui-card-lift:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 10px 28px -12px rgb(0 0 0 / 0.12),
+    0 4px 12px -6px rgb(0 0 0 / 0.08);
+}
+.dark .ui-card-lift:hover {
+  box-shadow:
+    0 12px 32px -14px rgb(0 0 0 / 0.45),
+    0 4px 14px -6px rgb(0 0 0 / 0.25);
+}
+
+.ui-fade-quick {
+  animation: ui-fade-in 0.28s ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-page-content,
+  .ui-motion-enter,
+  .ui-header-animate,
+  .ui-fade-quick {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  .ui-card-lift:hover {
+    transform: none;
+  }
+}

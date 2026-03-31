@@ -1,7 +1,7 @@
 "use client";
 
 import { BracketView } from "@/components/BracketView";
-import type { BracketData } from "@/lib/bracket";
+import { collectMatchScheduleOrder, type BracketData } from "@/lib/bracket";
 import { parseMatchResultsJson } from "@/lib/match-results";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
@@ -73,6 +73,10 @@ export function TournamentPublicClient({ code }: { code: string }) {
 
   const bracket = useMemo(() => parseBracket(data?.bracketJson ?? null), [data?.bracketJson]);
   const results = useMemo(() => parseMatchResultsJson(data?.matchResultsJson), [data?.matchResultsJson]);
+  const scheduleRows = useMemo(
+    () => (bracket ? collectMatchScheduleOrder(bracket) : []),
+    [bracket],
+  );
 
   if (digits.length !== 6) {
     return (
@@ -133,9 +137,70 @@ export function TournamentPublicClient({ code }: { code: string }) {
           아직 대진이 공개되지 않았습니다.
         </p>
       ) : (
-        <div className="mt-8 rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-950">
-          <BracketView data={bracket} results={results} />
-        </div>
+        <>
+          {scheduleRows.length > 0 ? (
+            <section className="mt-8 rounded-2xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-950">
+              <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">경기 순서</h2>
+              <p className="mt-1 text-xs text-zinc-500">
+                라운드·조 흐름 순입니다. 토너먼트는 앞 라운드 종료 후 다음 경기가 열립니다.
+              </p>
+              <div className="mt-4 max-h-[min(50vh,28rem)] overflow-y-auto rounded-xl border border-zinc-100 dark:border-zinc-800">
+                <table className="w-full min-w-[280px] text-left text-sm">
+                  <thead className="sticky top-0 bg-zinc-50 text-xs uppercase text-zinc-500 dark:bg-zinc-900">
+                    <tr>
+                      <th className="w-12 px-3 py-2">#</th>
+                      <th className="px-3 py-2">구분</th>
+                      <th className="px-3 py-2">라운드</th>
+                      <th className="px-3 py-2">대진</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {scheduleRows.map((row) => {
+                      const k = row.key ?? row.id;
+                      const w = results[k];
+                      let status = "—";
+                      if (w === "left") status = "좌 승";
+                      else if (w === "right") status = "우 승";
+                      return (
+                        <tr
+                          key={`${row.order}-${row.id}-${row.section}`}
+                          className="border-t border-zinc-100 dark:border-zinc-800"
+                        >
+                          <td className="whitespace-nowrap px-3 py-2 text-zinc-500">{row.order}</td>
+                          <td className="max-w-[120px] truncate px-3 py-2 text-zinc-600 dark:text-zinc-400" title={row.section}>
+                            {row.section || "—"}
+                          </td>
+                          <td className="max-w-[100px] truncate px-3 py-2 text-zinc-600 dark:text-zinc-400" title={row.roundTitle}>
+                            {row.roundTitle}
+                          </td>
+                          <td className="px-3 py-2">
+                            <span className="font-mono text-xs text-zinc-400">{row.id}</span>
+                            <div className="mt-0.5 text-zinc-800 dark:text-zinc-200">
+                              <span className={w === "left" ? "font-semibold text-emerald-700 dark:text-emerald-300" : ""}>
+                                {row.left}
+                              </span>
+                              <span className="mx-1 text-amber-600">vs</span>
+                              <span className={w === "right" ? "font-semibold text-emerald-700 dark:text-emerald-300" : ""}>
+                                {row.right}
+                              </span>
+                            </div>
+                            {live ? (
+                              <p className="mt-1 text-[11px] text-zinc-500">결과: {status}</p>
+                            ) : null}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          ) : null}
+          <div className="mt-8 rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-950">
+            <h2 className="mb-4 text-lg font-semibold text-zinc-900 dark:text-zinc-50">대회 진행 상황 · 대진표</h2>
+            <BracketView data={bracket} results={results} />
+          </div>
+        </>
       )}
 
       <p className="mt-10 text-center text-sm">

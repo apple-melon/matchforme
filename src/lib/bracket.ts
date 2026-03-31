@@ -425,6 +425,70 @@ export function buildDraw(
   return { error: "알 수 없는 경기 방식입니다." };
 }
 
+/** 관람용: 라운드·조 순으로 경기를 나열한 순서표 (진행 가능한 대략적 순서) */
+export type ScheduledMatchRow = {
+  order: number;
+  section: string;
+  roundTitle: string;
+  id: string;
+  left: string;
+  right: string;
+  key?: string;
+};
+
+export function collectMatchScheduleOrder(data: BracketData): ScheduledMatchRow[] {
+  const rows: ScheduledMatchRow[] = [];
+  let order = 0;
+  const push = (section: string, roundTitle: string, m: DrawMatch) => {
+    order += 1;
+    rows.push({
+      order,
+      section,
+      roundTitle,
+      id: m.id,
+      left: m.left,
+      right: m.right,
+      key: m.key,
+    });
+  };
+
+  if (data.format === "TOURNAMENT" || data.format === "LEAGUE") {
+    for (const round of data.rounds) {
+      for (const m of round.matches) {
+        push("", round.title, m);
+      }
+    }
+    return rows;
+  }
+  if (data.format === "LEAGUE_PHASED") {
+    for (const g of data.preliminary) {
+      const sec = `${g.groupName}조 예선`;
+      for (const round of g.rounds) {
+        for (const m of round.matches) {
+          push(sec, round.title, m);
+        }
+      }
+    }
+    for (const round of data.main) {
+      for (const m of round.matches) {
+        push("본선", round.title, m);
+      }
+    }
+    return rows;
+  }
+  if (data.format === "WEIGHT_CLASS" || data.format === "HEIGHT_CLASS") {
+    for (const g of data.groups) {
+      for (const round of g.rounds) {
+        for (const m of round.matches) {
+          push(g.label, round.title, m);
+        }
+      }
+    }
+    return rows;
+  }
+  return rows;
+}
+
 /** 각 경기에 고유 key 부여 (결과 기록용). 기존 데이터에 key 없으면 재생성 시 자동 부여 */
 export function assignMatchKeys(data: BracketData): BracketData {
   const key = () => randomUUID();

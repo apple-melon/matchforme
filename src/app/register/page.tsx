@@ -41,16 +41,19 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="mx-auto max-w-md px-4 py-16">
+    <div className="ui-motion-enter mx-auto max-w-md px-4 py-16">
       <h1 className="text-2xl font-bold text-foreground">회원가입</h1>
       <p className="mt-1 text-sm text-muted">대회를 만들거나, 로그인 후 참가하면 진행 상황을 모아 볼 수 있습니다.</p>
-      <form onSubmit={(e) => void submit(e)} className="mt-8 space-y-4 rounded-2xl border border-card-border bg-card p-6">
+      <form
+        onSubmit={(e) => void submit(e)}
+        className="ui-motion-enter ui-motion-delay-1 mt-8 space-y-4 rounded-2xl border border-card-border bg-card p-6 shadow-sm transition-[box-shadow] duration-300 hover:shadow-md"
+      >
         <label className="block text-sm font-medium">
           이름 (선택)
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-card-border bg-background px-3 py-2 outline-none ring-amber-500/40 focus:ring-2"
+            className="mt-1 w-full rounded-lg border border-card-border bg-background px-3 py-2 outline-none ring-amber-500/40 transition-[border-color,box-shadow] duration-200 focus:ring-2"
           />
         </label>
         <label className="block text-sm font-medium">
@@ -61,7 +64,7 @@ export default function RegisterPage() {
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-card-border bg-background px-3 py-2 outline-none ring-amber-500/40 focus:ring-2"
+            className="mt-1 w-full rounded-lg border border-card-border bg-background px-3 py-2 outline-none ring-amber-500/40 transition-[border-color,box-shadow] duration-200 focus:ring-2"
           />
         </label>
         <label className="block text-sm font-medium">
@@ -73,22 +76,22 @@ export default function RegisterPage() {
             minLength={6}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-card-border bg-background px-3 py-2 outline-none ring-amber-500/40 focus:ring-2"
+            className="mt-1 w-full rounded-lg border border-card-border bg-background px-3 py-2 outline-none ring-amber-500/40 transition-[border-color,box-shadow] duration-200 focus:ring-2"
           />
         </label>
-        {err ? <p className="text-sm text-red-600 dark:text-red-400">{err}</p> : null}
-        {ok ? <p className="text-sm text-emerald-600 dark:text-emerald-400">{ok}</p> : null}
+        {err ? <p className="ui-fade-quick text-sm text-red-600 dark:text-red-400">{err}</p> : null}
+        {ok ? <p className="ui-fade-quick text-sm text-emerald-600 dark:text-emerald-400">{ok}</p> : null}
         <button
           type="submit"
           disabled={busy}
-          className="w-full rounded-lg bg-amber-500 py-2.5 text-sm font-semibold text-zinc-900 disabled:opacity-60"
+          className="w-full rounded-lg bg-amber-500 py-2.5 text-sm font-semibold text-zinc-900 transition-[transform,filter,opacity] duration-200 hover:brightness-105 active:scale-[0.99] disabled:opacity-60"
         >
           {busy ? "처리 중…" : "가입하기"}
         </button>
       </form>
       <p className="mt-6 text-center text-sm text-muted">
         이미 계정이 있으면{" "}
-        <Link href="/login" className="text-amber-600 underline">
+        <Link href="/login" className="text-amber-600 underline transition-colors duration-200 hover:text-amber-500">
           로그인
         </Link>
       </p>

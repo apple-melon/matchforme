@@ -28,7 +28,7 @@ export function ThemeSwitcher() {
       <select
         value={theme === "dark" || theme === "light" ? theme : "system"}
         onChange={(e) => setTheme(e.target.value)}
-        className="h-9 min-w-[7.5rem] cursor-pointer rounded-lg border border-card-border bg-card px-2 text-foreground outline-none ring-amber-500/40 focus:ring-2"
+        className="h-9 min-w-[7.5rem] cursor-pointer rounded-lg border border-card-border bg-card px-2 text-foreground outline-none ring-amber-500/40 transition-[border-color,box-shadow,background-color] duration-200 focus:ring-2"
       >
         <option value="light">라이트</option>
         <option value="dark">다크</option>

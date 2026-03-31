@@ -88,6 +88,7 @@ function ManageInner({ tournamentId }: { tournamentId: string }) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [showBracket, setShowBracket] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
+  const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
 
   useEffect(() => {
     const k = searchParams.get("k");
@@ -164,8 +165,20 @@ function ManageInner({ tournamentId }: { tournamentId: string }) {
   async function copyText(text: string) {
     try {
       await navigator.clipboard.writeText(text);
+      return true;
     } catch {
-      /* ignore */
+      return false;
+    }
+  }
+
+  async function copyWithNotice(text: string, okMessage: string) {
+    const ok = await copyText(text);
+    if (ok) {
+      setCopyFeedback(okMessage);
+      window.setTimeout(() => setCopyFeedback(null), 2800);
+    } else {
+      setCopyFeedback("복사에 실패했습니다. 브라우저에서 클립보드 권한을 확인해 주세요.");
+      window.setTimeout(() => setCopyFeedback(null), 3500);
     }
   }
 
@@ -400,13 +413,13 @@ function ManageInner({ tournamentId }: { tournamentId: string }) {
         <div className="flex flex-col gap-2 text-right text-sm">
           <span className="text-zinc-500">참가·진행 보기</span>
           <button
-            type="button"
-            onClick={() => void copyText(joinUrl)}
-            className="max-w-xs truncate text-left text-amber-600 underline sm:max-w-md sm:text-right"
-            title={joinUrl}
-          >
-            참가 링크 복사
-          </button>
+              type="button"
+              onClick={() => void copyWithNotice(joinUrl, "참가 링크가 복사되었습니다.")}
+              className="max-w-xs truncate text-left text-amber-600 underline sm:max-w-md sm:text-right"
+              title={joinUrl}
+            >
+              참가 링크 복사
+            </button>
           <Link href={publicProgressUrl || "#"} className="text-amber-600 underline">
             공개 진행 상황 페이지
           </Link>
@@ -415,7 +428,7 @@ function ManageInner({ tournamentId }: { tournamentId: string }) {
               <span className="text-zinc-500">운영 링크 (분실 금지)</span>
               <button
                 type="button"
-                onClick={() => void copyText(manageBookmarkUrl)}
+                onClick={() => void copyWithNotice(manageBookmarkUrl, "운영(북마크) 링크가 복사되었습니다.")}
                 className="max-w-xs truncate text-left text-amber-600 underline sm:max-w-md sm:text-right"
                 title={manageBookmarkUrl}
               >
@@ -437,6 +450,15 @@ function ManageInner({ tournamentId }: { tournamentId: string }) {
           ) : null}
         </div>
       </div>
+
+      {copyFeedback ? (
+        <div
+          role="status"
+          className="fixed bottom-6 left-1/2 z-50 max-w-[min(90vw,24rem)] -translate-x-1/2 rounded-xl border border-emerald-500/40 bg-emerald-50 px-4 py-3 text-center text-sm font-medium text-emerald-900 shadow-lg dark:border-emerald-600/50 dark:bg-emerald-950/90 dark:text-emerald-100"
+        >
+          {copyFeedback}
+        </div>
+      ) : null}
 
       <section className="mt-8 rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-950">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -514,9 +536,9 @@ function ManageInner({ tournamentId }: { tournamentId: string }) {
 
       <section className="mt-8 rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-950">
         <h2 className="text-lg font-semibold">대진 옵션</h2>
-        <p className="mt-1 text-sm text-zinc-500">시드 방식과 체급·키급 조 개수를 정합니다.</p>
-        <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:flex-wrap">
-          <label className="flex flex-col gap-1 text-sm">
+        <p className="mt-1 text-sm text-zinc-500">대진 추첨 시 참가자 배열 순서(시드)를 정합니다.</p>
+        <div className="mt-4">
+          <label className="flex max-w-md flex-col gap-1 text-sm">
             <span className="font-medium text-zinc-700 dark:text-zinc-300">시드 (배열 순서)</span>
             <select
               value={seedBy}
@@ -532,22 +554,6 @@ function ManageInner({ tournamentId }: { tournamentId: string }) {
                 키 작은 순
               </option>
             </select>
-          </label>
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium text-zinc-700 dark:text-zinc-300">체급/키급 나누기 — 조 개수</span>
-            <select
-              value={data.splitClassCount}
-              disabled={Boolean(busy) || Boolean(data.startedAt)}
-              onChange={(e) => void patchSettings({ splitClassCount: Number(e.target.value) })}
-              className="rounded-lg border border-zinc-300 bg-white px-3 py-2 dark:border-zinc-600 dark:bg-zinc-900"
-            >
-              {[2, 3, 4, 5].map((n) => (
-                <option key={n} value={n}>
-                  {n}조
-                </option>
-              ))}
-            </select>
-            <span className="text-xs text-zinc-500">체급별·키급별 토너먼트에서만 사용됩니다.</span>
           </label>
         </div>
       </section>
@@ -582,6 +588,32 @@ function ManageInner({ tournamentId }: { tournamentId: string }) {
             </label>
           ))}
         </div>
+
+        {currentFormat === "WEIGHT_CLASS" || currentFormat === "HEIGHT_CLASS" ? (
+          <div className="mt-5 rounded-xl border border-amber-500/30 bg-amber-50/80 p-4 dark:border-amber-600/40 dark:bg-amber-950/25">
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="font-medium text-zinc-800 dark:text-zinc-200">
+                체급/키급 나누기 — 조 개수
+              </span>
+              <p className="text-xs text-zinc-600 dark:text-zinc-400">
+                선택한 방식(체급별 토너먼트 / 키급별 토너먼트)에서 몇 개 조로 나눌지 정합니다.
+              </p>
+              <select
+                value={data.splitClassCount}
+                disabled={Boolean(busy) || Boolean(data.startedAt)}
+                onChange={(e) => void patchSettings({ splitClassCount: Number(e.target.value) })}
+                className="mt-1 max-w-xs rounded-lg border border-zinc-300 bg-white px-3 py-2 dark:border-zinc-600 dark:bg-zinc-900"
+              >
+                {[2, 3, 4, 5].map((n) => (
+                  <option key={n} value={n}>
+                    {n}조
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+        ) : null}
+
         <button
           type="button"
           disabled={Boolean(busy) || !canDraw || Boolean(data.startedAt)}
