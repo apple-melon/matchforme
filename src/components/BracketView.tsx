@@ -16,49 +16,50 @@ function MatchCard({ m, results, editable, onSetWinner }: { m: DrawMatch } & Omi
   const k = m.key ?? m.id;
   const w = r[k];
 
+  const leftWin = w === "left";
+  const rightWin = w === "right";
+  const leftLose = w != null && w === "right";
+  const rightLose = w != null && w === "left";
+
+  const sideClass = (win: boolean, lose: boolean) =>
+    `block w-full rounded-md px-2 py-1.5 text-left text-sm font-medium transition hover:ring-2 hover:ring-accent/30 ${
+      win
+        ? "bg-emerald-500/20 text-emerald-900 ring-1 ring-emerald-500/25 dark:text-emerald-100"
+        : lose
+          ? "text-zinc-500 line-through decoration-zinc-400 dark:text-zinc-400 dark:decoration-zinc-500"
+          : "text-zinc-900 dark:text-zinc-100"
+    }`;
+
   return (
     <div className="rounded-xl border-2 border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-600 dark:bg-zinc-900">
       <p className="mb-2 text-xs font-medium uppercase tracking-wide text-zinc-500">{m.id}</p>
-      <div className="flex flex-col gap-2 text-sm sm:flex-row sm:items-center sm:justify-between">
-        <span
-          className={`font-medium ${
-            w === "left" ? "rounded-md bg-emerald-500/20 px-2 py-1 text-emerald-900 dark:text-emerald-100" : "text-zinc-900 dark:text-zinc-100"
-          }`}
-        >
-          {m.left}
-        </span>
-        <span className="hidden text-center text-xs font-semibold text-amber-600 sm:inline">VS</span>
-        <span className="text-center text-xs font-semibold text-amber-600 sm:hidden">VS</span>
-        <span
-          className={`font-medium ${
-            w === "right" ? "rounded-md bg-emerald-500/20 px-2 py-1 text-emerald-900 dark:text-emerald-100" : "text-zinc-900 dark:text-zinc-100"
-          }`}
-        >
-          {m.right}
-        </span>
+      <div className="flex flex-col gap-2 text-sm sm:flex-row sm:items-stretch sm:justify-between">
+        {editable && onSetWinner ? (
+          <button type="button" onClick={() => onSetWinner(k, "left")} className={sideClass(leftWin, leftLose)} title="클릭하여 승자로 기록">
+            {m.left}
+          </button>
+        ) : (
+          <span className={sideClass(leftWin, leftLose)}>{m.left}</span>
+        )}
+        <span className="hidden shrink-0 self-center text-center text-xs font-semibold text-accent sm:inline">VS</span>
+        <span className="shrink-0 self-center text-center text-xs font-semibold text-accent sm:hidden">VS</span>
+        {editable && onSetWinner ? (
+          <button type="button" onClick={() => onSetWinner(k, "right")} className={sideClass(rightWin, rightLose)} title="클릭하여 승자로 기록">
+            {m.right}
+          </button>
+        ) : (
+          <span className={sideClass(rightWin, rightLose)}>{m.right}</span>
+        )}
       </div>
-      {editable && onSetWinner ? (
-        <div className="mt-3 flex flex-wrap gap-1 border-t border-zinc-100 pt-3 dark:border-zinc-700">
-          <button
-            type="button"
-            onClick={() => onSetWinner(k, "left")}
-            className="rounded bg-zinc-100 px-2 py-0.5 text-[11px] font-medium dark:bg-zinc-800"
-          >
-            왼쪽 승
-          </button>
-          <button
-            type="button"
-            onClick={() => onSetWinner(k, "right")}
-            className="rounded bg-zinc-100 px-2 py-0.5 text-[11px] font-medium dark:bg-zinc-800"
-          >
-            오른쪽 승
-          </button>
+      {editable && onSetWinner && w != null ? (
+        <div className="mt-3 border-t border-zinc-100 pt-3 dark:border-zinc-700">
+          <p className="mb-1.5 text-[10px] text-zinc-500">승자: 이름을 눌러 선택 · 아래는 초기화</p>
           <button
             type="button"
             onClick={() => onSetWinner(k, null)}
-            className="rounded border border-zinc-200 px-2 py-0.5 text-[11px] dark:border-zinc-600"
+            className="rounded border border-zinc-200 px-2 py-0.5 text-[11px] text-zinc-600 hover:bg-zinc-50 dark:border-zinc-600 dark:text-zinc-300 dark:hover:bg-zinc-800"
           >
-            초기화
+            이 경기 결과 초기화
           </button>
         </div>
       ) : null}

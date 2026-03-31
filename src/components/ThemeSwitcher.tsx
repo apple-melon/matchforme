@@ -1,5 +1,6 @@
 "use client";
 
+import { AnimatedSelect } from "@/components/AnimatedSelect";
 import { useTheme } from "next-themes";
 import { useSyncExternalStore } from "react";
 
@@ -9,6 +10,12 @@ function useIsClient() {
   return useSyncExternalStore(emptySubscribe, () => true, () => false);
 }
 
+const THEME_OPTIONS = [
+  { value: "light", label: "라이트" },
+  { value: "dark", label: "다크" },
+  { value: "system", label: "시스템" },
+];
+
 export function ThemeSwitcher() {
   const mounted = useIsClient();
   const { theme, setTheme } = useTheme();
@@ -16,24 +23,24 @@ export function ThemeSwitcher() {
   if (!mounted) {
     return (
       <div
-        className="h-9 min-w-[7.5rem] rounded-lg border border-card-border bg-card"
+        className="h-9 min-w-[7.5rem] rounded-lg border border-accent/20 bg-card"
         aria-hidden
       />
     );
   }
 
+  const value = theme === "dark" || theme === "light" ? theme : "system";
+
   return (
-    <label className="flex items-center gap-2 text-sm text-muted">
+    <div className="flex min-w-[7.5rem] items-center gap-2 text-sm text-muted">
       <span className="sr-only">테마</span>
-      <select
-        value={theme === "dark" || theme === "light" ? theme : "system"}
-        onChange={(e) => setTheme(e.target.value)}
-        className="h-9 min-w-[7.5rem] cursor-pointer rounded-lg border border-card-border bg-card px-2 text-foreground outline-none ring-amber-500/40 transition-[border-color,box-shadow,background-color] duration-200 focus:ring-2"
-      >
-        <option value="light">라이트</option>
-        <option value="dark">다크</option>
-        <option value="system">시스템</option>
-      </select>
-    </label>
+      <AnimatedSelect
+        aria-label="테마"
+        value={value}
+        onChange={(v) => setTheme(v)}
+        options={THEME_OPTIONS}
+        className="min-w-[7.5rem]"
+      />
+    </div>
   );
 }

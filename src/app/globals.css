@@ -3,12 +3,17 @@
 /* next-themes: html.dark 기준으로 dark: 변형 적용 */
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* 라이트: 본문·보조 텍스트 대비 강화 + 톡 튀는 액센트(틸) */
 :root {
-  --background: #f4f4f5;
-  --foreground: #18181b;
+  --background: #fafafa;
+  --foreground: #0c0c0e;
   --card: #ffffff;
-  --card-border: #e4e4e7;
-  --muted: #52525b;
+  --card-border: #d1d1d6;
+  --muted: #3d3d45;
+  --accent: #0d9488;
+  --accent-hover: #0f766e;
+  --accent-soft: rgba(13, 148, 136, 0.12);
+  --accent-fg: #ffffff;
 }
 
 .dark {
@@ -17,6 +22,10 @@
   --card: #18181b;
   --card-border: #3f3f46;
   --muted: #a1a1aa;
+  --accent: #2dd4bf;
+  --accent-hover: #5eead4;
+  --accent-soft: rgba(45, 212, 191, 0.14);
+  --accent-fg: #042f2e;
 }
 
 @theme inline {
@@ -25,6 +34,11 @@
   --color-card: var(--card);
   --color-card-border: var(--card-border);
   --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-fg: var(--accent-fg);
+  --color-accent-hover: var(--accent-hover);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
@@ -137,5 +151,9 @@ body {
   }
   .ui-card-lift:hover {
     transform: none;
+  }
+  .ui-select-panel {
+    transform: none !important;
+    transition-duration: 0.01ms !important;
   }
 }

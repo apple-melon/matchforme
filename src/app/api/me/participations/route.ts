@@ -19,6 +19,8 @@ export async function GET() {
           bracketJson: true,
           matchResultsJson: true,
           format: true,
+          startedAt: true,
+          endedAt: true,
         },
       },
     },
@@ -37,6 +39,8 @@ export async function GET() {
         format: r.tournament.format,
         hasBracket: Boolean(r.tournament.bracketJson),
         matchResultsJson: r.tournament.matchResultsJson,
+        startedAt: r.tournament.startedAt ? r.tournament.startedAt.toISOString() : null,
+        endedAt: r.tournament.endedAt ? r.tournament.endedAt.toISOString() : null,
       },
     })),
   });

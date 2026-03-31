@@ -127,12 +127,12 @@ export default function CreateTournamentPage() {
         <p className="mt-2 text-sm text-muted">대회를 만들려면 먼저 로그인해 주세요.</p>
         <Link
           href="/login?next=/create"
-          className="mt-8 inline-block rounded-lg bg-amber-500 px-5 py-2.5 text-sm font-semibold text-zinc-900 transition-[transform,filter] duration-200 hover:brightness-105 active:scale-[0.99]"
+          className="mt-8 inline-block rounded-lg bg-accent px-5 py-2.5 text-sm font-semibold text-accent-fg transition-[transform,filter] duration-200 hover:brightness-110 active:scale-[0.99]"
         >
           로그인
         </Link>
         <p className="mt-4 text-sm">
-          <Link href="/register" className="text-amber-600 underline transition-colors duration-200 hover:text-amber-500">
+          <Link href="/register" className="font-medium text-accent underline transition-colors duration-200 hover:text-accent-hover">
             회원가입
           </Link>
         </p>
@@ -162,14 +162,14 @@ export default function CreateTournamentPage() {
             <button
               type="button"
               onClick={() => downloadOperatorBundle(created)}
-              className="w-full rounded-lg border border-amber-600/40 bg-amber-500/15 px-4 py-2.5 text-sm font-semibold text-foreground transition-[background-color,transform] duration-200 hover:bg-amber-500/25 active:scale-[0.99] dark:border-amber-500/50 dark:bg-amber-500/10"
+              className="w-full rounded-lg border border-accent/40 bg-accent-soft px-4 py-2.5 text-sm font-semibold text-foreground transition-[background-color,transform] duration-200 hover:bg-accent/20 active:scale-[0.99] dark:border-accent/50"
             >
               운영·참가 링크.txt 다운로드
             </button>
             <button
               type="button"
               onClick={() => router.push(`/manage/${created.id}`)}
-              className="w-full rounded-lg bg-amber-500 py-2.5 text-sm font-semibold text-zinc-900 transition-[filter,transform] duration-200 hover:bg-amber-400 active:scale-[0.99]"
+              className="w-full rounded-lg bg-accent py-2.5 text-sm font-semibold text-accent-fg transition-[filter,transform] duration-200 hover:brightness-110 active:scale-[0.99]"
             >
               운영 페이지로 이동
             </button>
@@ -183,7 +183,7 @@ export default function CreateTournamentPage() {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="예: 2026 봄 친선전"
-              className="mt-1 w-full rounded-lg border border-card-border bg-background px-3 py-2 text-foreground outline-none ring-amber-500/40 transition-[border-color,box-shadow] duration-200 focus:ring-2"
+              className="mt-1 w-full rounded-lg border border-card-border bg-background px-3 py-2 text-foreground outline-none ring-accent/35 transition-[border-color,box-shadow] duration-200 focus:ring-2"
             />
           </label>
           <div className="mt-6">
@@ -208,7 +208,7 @@ export default function CreateTournamentPage() {
             type="button"
             onClick={() => void createTournament()}
             disabled={creating}
-            className="mt-6 w-full rounded-lg bg-amber-500 py-2.5 text-sm font-semibold text-zinc-900 transition-[transform,filter,opacity] duration-200 hover:bg-amber-400 active:scale-[0.99] disabled:opacity-60"
+            className="mt-6 w-full rounded-lg bg-accent py-2.5 text-sm font-semibold text-accent-fg transition-[transform,filter,opacity] duration-200 hover:brightness-110 active:scale-[0.99] disabled:opacity-60"
           >
             {creating ? "만드는 중…" : "대회 만들기"}
           </button>

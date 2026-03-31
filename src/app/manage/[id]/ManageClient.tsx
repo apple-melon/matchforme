@@ -2,6 +2,7 @@
 
 import type { BracketData, DrawFormat, SeedBy } from "@/lib/bracket";
 import { BracketView } from "@/components/BracketView";
+import { AnimatedSelect } from "@/components/AnimatedSelect";
 import { PdfExportButton } from "@/components/PdfExportButton";
 import { parseCollectedFieldsJson } from "@/lib/participant-fields";
 import type { MatchResults } from "@/lib/match-results";
@@ -28,6 +29,7 @@ type TournamentPayload = {
   matchResultsJson: string | null;
   collectedFieldsJson: string;
   startedAt: string | null;
+  endedAt: string | null;
   splitClassCount: number;
   seedBy: string;
   isOwner?: boolean;
@@ -129,10 +131,10 @@ function ManageInner({ tournamentId }: { tournamentId: string }) {
   }, [clientReady, fetchData]);
 
   useEffect(() => {
-    if (!data?.startedAt) return;
+    if (!data?.startedAt || data?.endedAt) return;
     const tmr = setInterval(() => void fetchData(), 2500);
     return () => clearInterval(tmr);
-  }, [data?.startedAt, fetchData]);
+  }, [data?.startedAt, data?.endedAt, fetchData]);
 
   useEffect(() => {
     if (data?.startedAt && data?.bracketJson) setShowBracket(true);
@@ -220,6 +222,32 @@ function ManageInner({ tournamentId }: { tournamentId: string }) {
         return;
       }
       router.push("/profile");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function finishTournament() {
+    if (!canManage || !data?.startedAt || data?.endedAt) return;
+    if (
+      !confirm(
+        "대회를 종료하면 경기 결과를 더 이상 수정할 수 없습니다. 참가자 화면에도 종료로 표시됩니다. 진행할까요?",
+      )
+    )
+      return;
+    setBusy("finish");
+    try {
+      const res = await fetch(`/api/tournaments/${tournamentId}/finish`, {
+        method: "POST",
+        credentials: "include",
+        headers: manageHeaders(secret),
+      });
+      const j = (await res.json()) as { error?: string };
+      if (!res.ok) {
+        alert(j.error ?? "종료 처리 실패");
+        return;
+      }
+      await fetchData();
     } finally {
       setBusy(null);
     }
@@ -366,7 +394,7 @@ function ManageInner({ tournamentId }: { tournamentId: string }) {
         <p className="text-sm text-red-600 dark:text-red-400">{loadErr ?? "오류"}</p>
         <p className="mt-4 text-sm text-zinc-600 dark:text-zinc-400">
           운영 비밀 링크(?k= 포함)로 들어오거나, 이 대회를 만든 계정으로{" "}
-          <Link href="/login" className="text-amber-600 underline">
+          <Link href="/login" className="text-accent underline">
             로그인
           </Link>
           한 뒤 &quot;내 대회&quot;에서 다시 열어 주세요.
@@ -396,7 +424,7 @@ function ManageInner({ tournamentId }: { tournamentId: string }) {
             <button
               type="button"
               onClick={() => void copyText(data.code)}
-              className="text-sm text-amber-600 underline"
+              className="text-sm text-accent underline"
             >
               코드 복사
             </button>
@@ -404,7 +432,11 @@ function ManageInner({ tournamentId }: { tournamentId: string }) {
           {data.isOwner ? (
             <p className="mt-2 text-xs text-zinc-500">주최자 계정으로 접속 중입니다.</p>
           ) : null}
-          {data.startedAt ? (
+          {data.endedAt ? (
+            <p className="mt-2 rounded-lg bg-zinc-200/90 px-3 py-1.5 text-xs font-medium text-zinc-800 dark:bg-zinc-700/80 dark:text-zinc-100">
+              대회 종료됨 · 경기 결과 수정 불가
+            </p>
+          ) : data.startedAt ? (
             <p className="mt-2 rounded-lg bg-emerald-500/15 px-3 py-1.5 text-xs font-medium text-emerald-800 dark:text-emerald-200">
               대회 진행 중 · 결과는 참가자 화면에도 주기적으로 반영됩니다.
             </p>
@@ -415,13 +447,16 @@ function ManageInner({ tournamentId }: { tournamentId: string }) {
           <button
               type="button"
               onClick={() => void copyWithNotice(joinUrl, "참가 링크가 복사되었습니다.")}
-              className="max-w-xs truncate text-left text-amber-600 underline sm:max-w-md sm:text-right"
+              className="max-w-xs truncate text-left text-accent underline sm:max-w-md sm:text-right"
               title={joinUrl}
             >
               참가 링크 복사
             </button>
-          <Link href={publicProgressUrl || "#"} className="text-amber-600 underline">
-            공개 진행 상황 페이지
+          <Link href={`${publicProgressUrl || "#"}#t-schedule`} className="text-accent underline">
+            공개 페이지 — 경기 순서
+          </Link>
+          <Link href={`${publicProgressUrl || "#"}#t-bracket`} className="text-accent underline">
+            공개 페이지 — 대진표·기록
           </Link>
           {secret ? (
             <>
@@ -429,7 +464,7 @@ function ManageInner({ tournamentId }: { tournamentId: string }) {
               <button
                 type="button"
                 onClick={() => void copyWithNotice(manageBookmarkUrl, "운영(북마크) 링크가 복사되었습니다.")}
-                className="max-w-xs truncate text-left text-amber-600 underline sm:max-w-md sm:text-right"
+                className="max-w-xs truncate text-left text-accent underline sm:max-w-md sm:text-right"
                 title={manageBookmarkUrl}
               >
                 북마크용 복사
@@ -540,20 +575,26 @@ function ManageInner({ tournamentId }: { tournamentId: string }) {
         <div className="mt-4">
           <label className="flex max-w-md flex-col gap-1 text-sm">
             <span className="font-medium text-zinc-700 dark:text-zinc-300">시드 (배열 순서)</span>
-            <select
+            <AnimatedSelect
+              aria-label="시드 방식"
               value={seedBy}
               disabled={Boolean(busy) || Boolean(data.startedAt)}
-              onChange={(e) => void patchSettings({ seedBy: e.target.value as SeedBy })}
-              className="rounded-lg border border-zinc-300 bg-white px-3 py-2 dark:border-zinc-600 dark:bg-zinc-900"
-            >
-              <option value="random">랜덤</option>
-              <option value="weightKg" disabled={!collected.includes("weightKg")}>
-                몸무게 가벼운 순
-              </option>
-              <option value="heightCm" disabled={!collected.includes("heightCm")}>
-                키 작은 순
-              </option>
-            </select>
+              onChange={(v) => void patchSettings({ seedBy: v as SeedBy })}
+              className="max-w-md"
+              options={[
+                { value: "random", label: "랜덤" },
+                {
+                  value: "weightKg",
+                  label: "몸무게 가벼운 순",
+                  disabled: !collected.includes("weightKg"),
+                },
+                {
+                  value: "heightCm",
+                  label: "키 작은 순",
+                  disabled: !collected.includes("heightCm"),
+                },
+              ]}
+            />
           </label>
         </div>
       </section>
@@ -567,7 +608,7 @@ function ManageInner({ tournamentId }: { tournamentId: string }) {
               key={f.value}
               className={`cursor-pointer rounded-xl border p-4 transition ${
                 currentFormat === f.value
-                  ? "border-amber-500 bg-amber-50 dark:border-amber-500 dark:bg-amber-950/30"
+                  ? "border-accent bg-accent-soft dark:border-accent dark:bg-accent/10"
                   : "border-zinc-200 hover:border-zinc-300 dark:border-zinc-700"
               }`}
             >
@@ -590,7 +631,7 @@ function ManageInner({ tournamentId }: { tournamentId: string }) {
         </div>
 
         {currentFormat === "WEIGHT_CLASS" || currentFormat === "HEIGHT_CLASS" ? (
-          <div className="mt-5 rounded-xl border border-amber-500/30 bg-amber-50/80 p-4 dark:border-amber-600/40 dark:bg-amber-950/25">
+          <div className="mt-5 rounded-xl border border-accent/35 bg-accent-soft p-4 dark:border-accent/40 dark:bg-accent/10">
             <label className="flex flex-col gap-1 text-sm">
               <span className="font-medium text-zinc-800 dark:text-zinc-200">
                 체급/키급 나누기 — 조 개수
@@ -598,18 +639,14 @@ function ManageInner({ tournamentId }: { tournamentId: string }) {
               <p className="text-xs text-zinc-600 dark:text-zinc-400">
                 선택한 방식(체급별 토너먼트 / 키급별 토너먼트)에서 몇 개 조로 나눌지 정합니다.
               </p>
-              <select
-                value={data.splitClassCount}
+              <AnimatedSelect
+                aria-label="조 개수"
+                className="mt-1 max-w-xs"
+                value={String(data.splitClassCount)}
                 disabled={Boolean(busy) || Boolean(data.startedAt)}
-                onChange={(e) => void patchSettings({ splitClassCount: Number(e.target.value) })}
-                className="mt-1 max-w-xs rounded-lg border border-zinc-300 bg-white px-3 py-2 dark:border-zinc-600 dark:bg-zinc-900"
-              >
-                {[2, 3, 4, 5].map((n) => (
-                  <option key={n} value={n}>
-                    {n}조
-                  </option>
-                ))}
-              </select>
+                onChange={(v) => void patchSettings({ splitClassCount: Number(v) })}
+                options={[2, 3, 4, 5].map((n) => ({ value: String(n), label: `${n}조` }))}
+              />
             </label>
           </div>
         ) : null}
@@ -618,12 +655,12 @@ function ManageInner({ tournamentId }: { tournamentId: string }) {
           type="button"
           disabled={Boolean(busy) || !canDraw || Boolean(data.startedAt)}
           onClick={() => void runDraw()}
-          className="mt-6 rounded-lg bg-amber-500 px-5 py-2.5 text-sm font-semibold text-zinc-900 disabled:opacity-50"
+          className="mt-6 rounded-lg bg-accent px-5 py-2.5 text-sm font-semibold text-accent-fg disabled:opacity-50 hover:brightness-110"
         >
           {busy === "draw" ? "대진 생성 중…" : "대진 생성 (매칭)"}
         </button>
         {data.startedAt ? (
-          <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">대회가 시작되어 대진을 다시 뽑을 수 없습니다.</p>
+          <p className="mt-2 text-xs text-accent dark:text-accent-hover">대회가 시작되어 대진을 다시 뽑을 수 없습니다.</p>
         ) : null}
         {!canDraw ? (
           <p className="mt-2 text-xs text-zinc-500">
@@ -655,6 +692,16 @@ function ManageInner({ tournamentId }: { tournamentId: string }) {
               className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-500 disabled:opacity-50"
             >
               {busy === "start" ? "처리 중…" : "대회 시작"}
+            </button>
+          ) : null}
+          {bracket && data.startedAt && !data.endedAt ? (
+            <button
+              type="button"
+              disabled={Boolean(busy)}
+              onClick={() => void finishTournament()}
+              className="rounded-lg border border-zinc-400 bg-white px-4 py-2 text-sm font-semibold text-zinc-800 hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-500 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
+            >
+              {busy === "finish" ? "처리 중…" : "대회 종료"}
             </button>
           ) : null}
         </div>
@@ -691,7 +738,7 @@ function ManageInner({ tournamentId }: { tournamentId: string }) {
               <BracketView
                 data={bracket}
                 results={matchResults}
-                editable
+                editable={!data.endedAt}
                 onSetWinner={(key, w) => void patchMatch(key, w)}
               />
             </div>

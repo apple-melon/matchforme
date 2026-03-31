@@ -32,6 +32,8 @@ model Tournament {
   owner               User?          @relation(fields: [ownerId], references: [id], onDelete: SetNull)
   // 대회 시작 시각 — 이후에만 경기 결과 입력 가능
   startedAt           DateTime?
+  // 대회 종료 시각 — 이후 경기 결과 수정 불가
+  endedAt             DateTime?
   createdAt           DateTime       @default(now())
   participants        Participant[]
 

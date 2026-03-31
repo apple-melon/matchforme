@@ -94,7 +94,7 @@ export function JoinClient({ code }: { code: string }) {
     return (
       <div className="mx-auto max-w-md px-4 py-20 text-center">
         <p className="text-red-600 dark:text-red-400">참가 코드는 6자리 숫자여야 합니다.</p>
-        <Link href="/" className="mt-6 inline-block text-sm font-medium text-amber-600 underline">
+        <Link href="/" className="mt-6 inline-block text-sm font-medium text-accent underline">
           처음으로
         </Link>
       </div>
@@ -105,7 +105,7 @@ export function JoinClient({ code }: { code: string }) {
     return (
       <div className="mx-auto max-w-md px-4 py-20 text-center">
         <p className="text-red-600 dark:text-red-400">{loadErr}</p>
-        <Link href="/" className="mt-6 inline-block text-sm font-medium text-amber-600 underline">
+        <Link href="/" className="mt-6 inline-block text-sm font-medium text-accent underline">
           처음으로
         </Link>
       </div>
@@ -127,7 +127,7 @@ export function JoinClient({ code }: { code: string }) {
         </p>
         <Link
           href={`/t/${info.code}`}
-          className="mt-8 inline-block rounded-lg bg-amber-500 px-5 py-2.5 text-sm font-semibold text-zinc-900"
+          className="mt-8 inline-block rounded-lg bg-accent px-5 py-2.5 text-sm font-semibold text-accent-fg"
         >
           진행 상황 보기
         </Link>
@@ -153,11 +153,11 @@ export function JoinClient({ code }: { code: string }) {
         <div className="mt-8 flex flex-col gap-3">
           <Link
             href={`/t/${info.code}`}
-            className="rounded-lg bg-amber-500 px-5 py-2.5 text-sm font-semibold text-zinc-900"
+            className="rounded-lg bg-accent px-5 py-2.5 text-sm font-semibold text-accent-fg"
           >
             대회 진행 상황 보기
           </Link>
-          <Link href="/profile" className="text-sm text-amber-600 underline">
+          <Link href="/profile" className="text-sm text-accent underline">
             프로필
           </Link>
           <button
@@ -252,7 +252,7 @@ export function JoinClient({ code }: { code: string }) {
         <button
           type="submit"
           disabled={submitting}
-          className="w-full rounded-lg bg-amber-500 py-2.5 text-sm font-semibold text-zinc-900 disabled:opacity-60"
+          className="w-full rounded-lg bg-accent py-2.5 text-sm font-semibold text-accent-fg disabled:opacity-60 hover:brightness-110"
         >
           {submitting ? "전송 중…" : "참가 신청"}
         </button>

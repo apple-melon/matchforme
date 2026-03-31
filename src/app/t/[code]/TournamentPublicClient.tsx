@@ -14,6 +14,7 @@ type Payload = {
   bracketJson: string | null;
   matchResultsJson: string | null;
   startedAt: string | null;
+  endedAt: string | null;
   participantCount: number;
 };
 
@@ -60,7 +61,7 @@ export function TournamentPublicClient({ code }: { code: string }) {
   }, [digits]);
 
   useEffect(() => {
-    if (digits.length !== 6 || !data?.id) return;
+    if (digits.length !== 6 || !data?.id || data?.endedAt) return;
     const tmr = setInterval(() => {
       void fetchPublic(digits)
         .then((j) => setData(j))
@@ -69,7 +70,7 @@ export function TournamentPublicClient({ code }: { code: string }) {
         });
     }, 2500);
     return () => clearInterval(tmr);
-  }, [digits, data?.id]);
+  }, [digits, data?.id, data?.endedAt]);
 
   const bracket = useMemo(() => parseBracket(data?.bracketJson ?? null), [data?.bracketJson]);
   const results = useMemo(() => parseMatchResultsJson(data?.matchResultsJson), [data?.matchResultsJson]);
@@ -78,11 +79,18 @@ export function TournamentPublicClient({ code }: { code: string }) {
     [bracket],
   );
 
+  const isBracketTreeFormat = Boolean(
+    bracket &&
+      (bracket.format === "TOURNAMENT" ||
+        bracket.format === "WEIGHT_CLASS" ||
+        bracket.format === "HEIGHT_CLASS"),
+  );
+
   if (digits.length !== 6) {
     return (
       <div className="mx-auto max-w-lg px-4 py-16 text-center text-red-600">
         올바른 코드가 아닙니다.
-        <Link href="/" className="mt-4 block text-amber-600 underline">
+        <Link href="/" className="mt-4 block text-accent underline">
           홈으로
         </Link>
       </div>
@@ -93,7 +101,7 @@ export function TournamentPublicClient({ code }: { code: string }) {
     return (
       <div className="mx-auto max-w-lg px-4 py-16 text-center">
         <p className="text-red-600 dark:text-red-400">{err}</p>
-        <Link href="/" className="mt-6 inline-block text-amber-600 underline">
+        <Link href="/" className="mt-6 inline-block text-accent underline">
           홈으로
         </Link>
       </div>
@@ -107,13 +115,18 @@ export function TournamentPublicClient({ code }: { code: string }) {
   }
 
   const live = Boolean(data.startedAt);
+  const ended = Boolean(data.endedAt);
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-10">
       <p className="text-xs font-medium uppercase text-zinc-500">대회 진행 · 관람</p>
       <div className="mt-1 flex flex-wrap items-center gap-2">
         <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">{data.title}</h1>
-        {live ? (
+        {ended ? (
+          <span className="rounded-full bg-zinc-300/90 px-2.5 py-0.5 text-xs font-semibold text-zinc-800 dark:bg-zinc-600 dark:text-zinc-100">
+            대회 종료
+          </span>
+        ) : live ? (
           <span className="rounded-full bg-emerald-500/20 px-2.5 py-0.5 text-xs font-semibold text-emerald-800 dark:text-emerald-200">
             LIVE · 약 2.5초마다 갱신
           </span>
@@ -127,10 +140,29 @@ export function TournamentPublicClient({ code }: { code: string }) {
         코드 <span className="font-mono font-semibold">{data.code}</span> · 참가 {data.participantCount}명
       </p>
       <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-        {live
-          ? "주최자가 기록한 경기 결과가 이 페이지에 실시간에 가깝게 반영됩니다."
-          : "주최자가 대회를 시작하면 여기에 승패가 표시됩니다."}
+        {ended
+          ? "대회가 종료되었습니다. 아래에서 경기 순서와 대진표·기록을 확인할 수 있습니다."
+          : live
+            ? "주최자가 기록한 경기 결과가 이 페이지에 실시간에 가깝게 반영됩니다."
+            : "주최자가 대회를 시작하면 여기에 승패가 표시됩니다."}
       </p>
+
+      {bracket && scheduleRows.length > 0 ? (
+        <nav className="mt-4 flex flex-wrap gap-3 text-sm">
+          <a href="#t-schedule" className="text-accent underline underline-offset-2">
+            경기 순서로 이동
+          </a>
+          <a href="#t-bracket" className="text-accent underline underline-offset-2">
+            대진표·기록으로 이동
+          </a>
+        </nav>
+      ) : bracket ? (
+        <nav className="mt-4 text-sm">
+          <a href="#t-bracket" className="text-accent underline underline-offset-2">
+            대진표·기록으로 이동
+          </a>
+        </nav>
+      ) : null}
 
       {!bracket ? (
         <p className="mt-10 rounded-xl border border-zinc-200 bg-card p-8 text-center text-sm text-zinc-500 dark:border-zinc-800">
@@ -138,8 +170,28 @@ export function TournamentPublicClient({ code }: { code: string }) {
         </p>
       ) : (
         <>
+          {isBracketTreeFormat ? (
+            <section
+              id="t-bracket"
+              className="scroll-mt-24 mt-8 rounded-2xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-950"
+            >
+              <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">대진표 · 경기 기록</h2>
+              <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                선으로 이어진 매치가 라운드 진행을 나타냅니다.{" "}
+                <span className="font-medium text-emerald-700 dark:text-emerald-300">강조</span>는 승자, 취소선은 패자
+                입니다.
+              </p>
+              <div className="mt-4 overflow-x-auto">
+                <BracketView data={bracket} results={results} />
+              </div>
+            </section>
+          ) : null}
+
           {scheduleRows.length > 0 ? (
-            <section className="mt-8 rounded-2xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-950">
+            <section
+              id="t-schedule"
+              className="scroll-mt-24 mt-8 rounded-2xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-950"
+            >
               <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">경기 순서</h2>
               <p className="mt-1 text-xs text-zinc-500">
                 라운드·조 흐름 순입니다. 토너먼트는 앞 라운드 종료 후 다음 경기가 열립니다.
@@ -158,9 +210,6 @@ export function TournamentPublicClient({ code }: { code: string }) {
                     {scheduleRows.map((row) => {
                       const k = row.key ?? row.id;
                       const w = results[k];
-                      let status = "—";
-                      if (w === "left") status = "좌 승";
-                      else if (w === "right") status = "우 승";
                       return (
                         <tr
                           key={`${row.order}-${row.id}-${row.section}`}
@@ -176,16 +225,34 @@ export function TournamentPublicClient({ code }: { code: string }) {
                           <td className="px-3 py-2">
                             <span className="font-mono text-xs text-zinc-400">{row.id}</span>
                             <div className="mt-0.5 text-zinc-800 dark:text-zinc-200">
-                              <span className={w === "left" ? "font-semibold text-emerald-700 dark:text-emerald-300" : ""}>
+                              <span
+                                className={
+                                  w === "left"
+                                    ? "font-semibold text-emerald-700 dark:text-emerald-300"
+                                    : w === "right"
+                                      ? "text-zinc-500 line-through decoration-zinc-400 dark:text-zinc-500"
+                                      : ""
+                                }
+                              >
                                 {row.left}
                               </span>
-                              <span className="mx-1 text-amber-600">vs</span>
-                              <span className={w === "right" ? "font-semibold text-emerald-700 dark:text-emerald-300" : ""}>
+                              <span className="mx-1 text-accent">vs</span>
+                              <span
+                                className={
+                                  w === "right"
+                                    ? "font-semibold text-emerald-700 dark:text-emerald-300"
+                                    : w === "left"
+                                      ? "text-zinc-500 line-through decoration-zinc-400 dark:text-zinc-500"
+                                      : ""
+                                }
+                              >
                                 {row.right}
                               </span>
                             </div>
-                            {live ? (
-                              <p className="mt-1 text-[11px] text-zinc-500">결과: {status}</p>
+                            {live && w != null ? (
+                              <p className="mt-1 text-[11px] text-zinc-500">
+                                결과: {w === "left" ? row.left : row.right} 승
+                              </p>
                             ) : null}
                           </td>
                         </tr>
@@ -196,15 +263,21 @@ export function TournamentPublicClient({ code }: { code: string }) {
               </div>
             </section>
           ) : null}
-          <div className="mt-8 rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-950">
-            <h2 className="mb-4 text-lg font-semibold text-zinc-900 dark:text-zinc-50">대회 진행 상황 · 대진표</h2>
-            <BracketView data={bracket} results={results} />
-          </div>
+
+          {!isBracketTreeFormat ? (
+            <div
+              id="t-bracket"
+              className="scroll-mt-24 mt-8 rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-950"
+            >
+              <h2 className="mb-4 text-lg font-semibold text-zinc-900 dark:text-zinc-50">대회 진행 상황 · 대진표 · 경기 기록</h2>
+              <BracketView data={bracket} results={results} />
+            </div>
+          ) : null}
         </>
       )}
 
       <p className="mt-10 text-center text-sm">
-        <Link href={`/join/${data.code}`} className="text-amber-600 underline">
+        <Link href={`/join/${data.code}`} className="text-accent underline">
           참가 신청 페이지
         </Link>
         {" · "}

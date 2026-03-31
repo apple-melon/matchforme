@@ -22,6 +22,8 @@ type Participation = {
     title: string;
     format: string;
     hasBracket: boolean;
+    startedAt: string | null;
+    endedAt: string | null;
   };
 };
 
@@ -87,7 +89,7 @@ export default function MyPage() {
         <p className="mt-2 text-sm text-muted">로그인 후 주최한 대회와 참가한 대회를 볼 수 있습니다.</p>
         <Link
           href="/login?next=/my"
-          className="mt-8 inline-block rounded-lg bg-amber-500 px-5 py-2.5 text-sm font-semibold text-zinc-900"
+          className="mt-8 inline-block rounded-lg bg-accent px-5 py-2.5 text-sm font-semibold text-accent-fg"
         >
           로그인
         </Link>
@@ -120,7 +122,7 @@ export default function MyPage() {
           {hosted.length === 0 ? (
             <li className="rounded-xl border border-card-border bg-card p-4 text-sm text-muted">
               아직 만든 대회가 없습니다.{" "}
-              <Link href="/create" className="text-amber-600 underline">
+              <Link href="/create" className="text-accent underline">
                 대회 만들기
               </Link>
             </li>
@@ -137,7 +139,7 @@ export default function MyPage() {
                   <div className="flex flex-wrap gap-2">
                     <Link
                       href={`/manage/${t.id}`}
-                      className="rounded-lg bg-amber-500 px-3 py-1.5 text-sm font-semibold text-zinc-900"
+                      className="rounded-lg bg-accent px-3 py-1.5 text-sm font-semibold text-accent-fg"
                     >
                       운영
                     </Link>
@@ -168,12 +170,30 @@ export default function MyPage() {
                   내 이름: {p.name} ({p.affiliation}) · 코드{" "}
                   <span className="font-mono">{p.tournament.code}</span>
                 </p>
-                <div className="mt-2">
-                  <Link href={`/t/${p.tournament.code}`} className="text-sm text-amber-600 underline">
-                    진행 상황 보기
+                <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm">
+                  <Link href={`/t/${p.tournament.code}`} className="font-medium text-accent underline">
+                    전체 보기
                   </Link>
-                  {!p.tournament.hasBracket ? (
-                    <span className="ml-2 text-xs text-muted">(대진 미공개)</span>
+                  {p.tournament.hasBracket ? (
+                    <>
+                      <Link href={`/t/${p.tournament.code}#t-schedule`} className="text-muted underline hover:text-foreground">
+                        경기 순서
+                      </Link>
+                      <Link href={`/t/${p.tournament.code}#t-bracket`} className="text-muted underline hover:text-foreground">
+                        대진표·기록
+                      </Link>
+                    </>
+                  ) : (
+                    <span className="text-xs text-muted">(대진 미공개)</span>
+                  )}
+                  {p.tournament.endedAt ? (
+                    <span className="rounded-full bg-zinc-200 px-2 py-0.5 text-xs text-zinc-700 dark:bg-zinc-700 dark:text-zinc-200">
+                      종료
+                    </span>
+                  ) : p.tournament.startedAt ? (
+                    <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-xs text-emerald-800 dark:text-emerald-200">
+                      진행 중
+                    </span>
                   ) : null}
                 </div>
               </li>
@@ -183,7 +203,7 @@ export default function MyPage() {
       </section>
 
       <p className="mt-12 text-center text-sm">
-        <Link href="/create" className="text-amber-600 underline">
+        <Link href="/create" className="text-accent underline">
           새 대회 만들기
         </Link>
         {" · "}

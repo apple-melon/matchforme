@@ -26,28 +26,24 @@ export default function Home() {
   return (
     <div className="mx-auto flex min-h-full max-w-lg flex-col gap-10 px-4 py-16">
       <header className="ui-motion-enter space-y-2 text-center">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted">대진표 · 토너먼트 · 리그</p>
-        <h1 className="text-3xl font-bold tracking-tight text-foreground">MATCH FOR ME</h1>
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-accent">대진표 · 토너먼트 · 리그</p>
+        <h1 className="flex items-center justify-center gap-2 text-3xl font-bold tracking-tight text-foreground">
+          <span className="inline-block h-3 w-3 rounded-sm bg-accent shadow-sm shadow-accent/30" aria-hidden />
+          MATCH FOR ME
+        </h1>
         <p className="text-sm leading-relaxed text-muted">
           대회를 만들고 6자리 숫자 코드로 선수를 모은 뒤, 토너먼트·리그·예선+본선으로 대진을 짜고 승패를 기록할 수
           있습니다.
         </p>
       </header>
 
-      <section className="ui-motion-enter ui-motion-delay-1 grid gap-3 sm:grid-cols-2">
+      <section className="ui-motion-enter ui-motion-delay-1">
         <Link
           href="/create"
-          className="ui-card-lift rounded-2xl border border-card-border bg-card p-5 text-center shadow-sm hover:border-amber-500/45"
+          className="ui-card-lift block rounded-2xl border border-accent/25 bg-card p-5 text-center shadow-sm hover:border-accent/45"
         >
           <span className="block text-sm font-semibold text-foreground">대회 만들기</span>
           <span className="mt-1 block text-xs text-muted">로그인 후 새 대회 (운영·참가 코드 발급)</span>
-        </Link>
-        <Link
-          href="/profile"
-          className="ui-card-lift rounded-2xl border border-card-border bg-card p-5 text-center shadow-sm hover:border-amber-500/45"
-        >
-          <span className="block text-sm font-semibold text-foreground">프로필</span>
-          <span className="mt-1 block text-xs text-muted">주최·참가 목록과 진행 상황</span>
         </Link>
       </section>
 
@@ -60,22 +56,28 @@ export default function Home() {
           placeholder="예: 482913"
           inputMode="numeric"
           maxLength={6}
-          className="mt-4 w-full rounded-lg border border-card-border bg-background px-3 py-3 text-center font-mono text-2xl tracking-[0.3em] text-foreground outline-none ring-amber-500/40 transition-[border-color,box-shadow] duration-200 focus:ring-2"
+          className="mt-4 w-full rounded-lg border border-card-border bg-background px-3 py-3 text-center font-mono text-2xl tracking-[0.3em] text-foreground outline-none ring-accent/35 transition-[border-color,box-shadow] duration-200 focus:border-accent/40 focus:ring-2"
         />
         <button
           type="button"
           onClick={goJoin}
-          className="mt-4 w-full rounded-lg border border-card-border py-2.5 text-sm font-semibold text-foreground transition-[background-color,transform,box-shadow] duration-200 hover:bg-background active:scale-[0.99]"
+          className="mt-4 w-full rounded-lg border border-accent/30 bg-accent-soft py-2.5 text-sm font-semibold text-accent transition-[background-color,transform,box-shadow] duration-200 hover:bg-accent/15 active:scale-[0.99] dark:hover:bg-accent/20"
         >
           참가 페이지로 이동
         </button>
       </section>
 
-      <section className="ui-motion-enter ui-motion-delay-3 flex flex-wrap justify-center gap-4 text-sm text-muted">
-        <Link href="/login" className="text-amber-600 underline transition-colors duration-200 hover:text-amber-500">
+      <section className="ui-motion-enter ui-motion-delay-3 flex flex-wrap items-center justify-center gap-3">
+        <Link
+          href="/login"
+          className="inline-flex min-w-[7.5rem] items-center justify-center rounded-lg bg-accent px-5 py-2.5 text-sm font-semibold text-accent-fg shadow-sm transition-[filter,transform] duration-200 hover:brightness-110 active:scale-[0.98]"
+        >
           로그인
         </Link>
-        <Link href="/register" className="underline transition-colors duration-200 hover:text-foreground">
+        <Link
+          href="/register"
+          className="inline-flex min-w-[7.5rem] items-center justify-center rounded-lg border-2 border-accent bg-accent-soft px-5 py-2.5 text-sm font-semibold text-accent transition-[background-color,transform,border-color] duration-200 hover:bg-accent/15 active:scale-[0.98] dark:hover:bg-accent/25"
+        >
           회원가입
         </Link>
       </section>

@@ -20,6 +20,9 @@ export async function PATCH(req: Request, { params }: Params) {
   if (!t.startedAt) {
     return NextResponse.json({ error: "운영 페이지에서 '대회 시작'을 먼저 눌러 주세요." }, { status: 400 });
   }
+  if (t.endedAt) {
+    return NextResponse.json({ error: "대회가 종료되어 경기 결과를 수정할 수 없습니다." }, { status: 400 });
+  }
 
   let body: { matchKey: string; winner: "left" | "right" | null };
   try {

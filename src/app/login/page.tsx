@@ -52,7 +52,7 @@ function LoginForm() {
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-card-border bg-background px-3 py-2 outline-none ring-amber-500/40 transition-[border-color,box-shadow] duration-200 focus:ring-2"
+            className="mt-1 w-full rounded-lg border border-card-border bg-background px-3 py-2 outline-none ring-accent/35 transition-[border-color,box-shadow] duration-200 focus:ring-2"
           />
         </label>
         <label className="block text-sm font-medium">
@@ -63,21 +63,21 @@ function LoginForm() {
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-card-border bg-background px-3 py-2 outline-none ring-amber-500/40 transition-[border-color,box-shadow] duration-200 focus:ring-2"
+            className="mt-1 w-full rounded-lg border border-card-border bg-background px-3 py-2 outline-none ring-accent/35 transition-[border-color,box-shadow] duration-200 focus:ring-2"
           />
         </label>
         {err ? <p className="ui-fade-quick text-sm text-red-600 dark:text-red-400">{err}</p> : null}
         <button
           type="submit"
           disabled={busy}
-          className="w-full rounded-lg bg-amber-500 py-2.5 text-sm font-semibold text-zinc-900 transition-[transform,filter,opacity] duration-200 hover:brightness-105 active:scale-[0.99] disabled:opacity-60"
+          className="w-full rounded-lg bg-accent py-2.5 text-sm font-semibold text-accent-fg transition-[transform,filter,opacity] duration-200 hover:brightness-110 active:scale-[0.99] disabled:opacity-60"
         >
           {busy ? "처리 중…" : "로그인"}
         </button>
       </form>
       <p className="mt-6 text-center text-sm text-muted">
         계정이 없으면{" "}
-        <Link href="/register" className="text-amber-600 underline transition-colors duration-200 hover:text-amber-500">
+        <Link href="/register" className="font-medium text-accent underline transition-colors duration-200 hover:text-accent-hover">
           회원가입
         </Link>
       </p>
