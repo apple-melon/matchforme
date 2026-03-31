@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { jsonFromAuthError } from "@/lib/auth-errors";
 import { prisma } from "@/lib/db";
 import { verifyPassword } from "@/lib/password";
 import { setSessionCookie, signSession } from "@/lib/session";
@@ -28,10 +29,7 @@ export async function POST(req: Request) {
     await setSessionCookie(token);
 
     return NextResponse.json({ ok: true, user: { id: user.id, email: user.email, name: user.name } });
-  } catch {
-    return NextResponse.json(
-      { error: "로그인 처리 중 오류가 발생했습니다. DB 마이그레이션 적용 여부를 확인해 주세요." },
-      { status: 500 },
-    );
+  } catch (e) {
+    return jsonFromAuthError(e, "login");
   }
 }

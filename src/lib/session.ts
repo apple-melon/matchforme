@@ -1,17 +1,23 @@
+import { createHash } from "crypto";
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 
 const COOKIE = "mf_session";
 
-function getSecret() {
-  const s = process.env.SESSION_SECRET;
-  if (!s || s.length < 16) {
-    if (process.env.NODE_ENV === "production") {
-      throw new Error("SESSION_SECRET must be set (min 16 chars) in production");
-    }
-    return new TextEncoder().encode("dev-only-insecure-secret-min-32-chars!!");
+/** HS256용 바이트 시크릿. SESSION_SECRET 우선, 없으면 DATABASE_URL에서 안정적으로 파생 (배포 시 누락 방지). */
+function getSecret(): Uint8Array {
+  const explicit = process.env.SESSION_SECRET?.trim();
+  if (explicit && explicit.length >= 16) {
+    return new TextEncoder().encode(explicit);
   }
-  return new TextEncoder().encode(s);
+  const dbUrl = process.env.DATABASE_URL?.trim();
+  if (dbUrl && dbUrl.length >= 8) {
+    return new Uint8Array(createHash("sha256").update(`mf-session-v1:${dbUrl}`).digest());
+  }
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("SESSION_SECRET(16자 이상) 또는 DATABASE_URL이 필요합니다.");
+  }
+  return new TextEncoder().encode("dev-only-insecure-secret-min-32-chars!!");
 }
 
 export type SessionPayload = { sub: string; email: string };
