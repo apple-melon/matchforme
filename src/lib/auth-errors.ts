@@ -13,7 +13,7 @@ export function jsonFromAuthError(e: unknown, context: "login" | "register"): Ne
       return NextResponse.json(
         {
           error:
-            "데이터베이스 테이블이 준비되지 않았습니다. 서버에서 `npx prisma migrate deploy`를 실행했는지 확인해 주세요.",
+            "데이터베이스 테이블이 아직 준비되지 않았습니다. 배포 직후라면 잠시 후 다시 시도해 주세요. 계속되면 Vercel(또는 호스팅)에 DATABASE_URL이 설정돼 있는지, 빌드 로그에 마이그레이션 오류가 없는지 확인해 주세요.",
         },
         { status: 500 },
       );
