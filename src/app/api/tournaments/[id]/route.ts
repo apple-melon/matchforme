@@ -25,6 +25,7 @@ export async function GET(req: Request, { params }: Params) {
     bracketJson: t.bracketJson,
     matchResultsJson: t.matchResultsJson,
     collectedFieldsJson: t.collectedFieldsJson,
+    startedAt: t.startedAt ? t.startedAt.toISOString() : null,
     splitClassCount: t.splitClassCount,
     seedBy: t.seedBy,
     ownerId: t.ownerId,

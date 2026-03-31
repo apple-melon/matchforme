@@ -29,14 +29,23 @@ export async function POST(req: Request, { params }: Params) {
     return NextResponse.json({ error: "잘못된 요청입니다." }, { status: 400 });
   }
 
-  if (!name || !affiliation) {
-    return NextResponse.json({ error: "이름과 소속을 모두 입력해 주세요." }, { status: 400 });
+  if (!name) {
+    return NextResponse.json({ error: "이름을 입력해 주세요." }, { status: 400 });
   }
 
   const t = await prisma.tournament.findUnique({ where: { id } });
   if (!t) return NextResponse.json({ error: "대회를 찾을 수 없습니다." }, { status: 404 });
+  if (t.startedAt) {
+    return NextResponse.json({ error: "이미 시작된 대회에는 참가 신청을 받지 않습니다." }, { status: 400 });
+  }
 
   const wanted = parseCollectedFieldsJson(t.collectedFieldsJson);
+  if (wanted.includes("affiliation") && !affiliation.trim()) {
+    return NextResponse.json({ error: "소속을 입력해 주세요." }, { status: 400 });
+  }
+  if (!wanted.includes("affiliation")) {
+    affiliation = "";
+  }
   if (wanted.includes("weightKg") && (weightKg == null || weightKg <= 0 || weightKg > 500)) {
     return NextResponse.json({ error: "몸무게(kg)를 올바르게 입력해 주세요." }, { status: 400 });
   }

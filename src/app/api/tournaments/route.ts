@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import { prisma } from "@/lib/db";
+import { parseCollectedFieldsJson, serializeCollectedFields } from "@/lib/participant-fields";
 import { randomNumericTournamentCode } from "@/lib/tournament-code";
 import { getSessionFromCookies } from "@/lib/session";
 
@@ -11,11 +12,20 @@ export async function POST(req: Request) {
   }
 
   let title = "";
+  let collectedFieldsJson = "[]";
   try {
-    const body = (await req.json()) as { title?: string };
+    const body = (await req.json()) as { title?: string; collectedFields?: string[] };
     title = (body.title ?? "").trim().slice(0, 120);
+    if (body.collectedFields !== undefined) {
+      if (!Array.isArray(body.collectedFields)) {
+        return NextResponse.json({ error: "collectedFields는 배열이어야 합니다." }, { status: 400 });
+      }
+      const asJson = JSON.stringify(body.collectedFields);
+      const cleaned = parseCollectedFieldsJson(asJson);
+      collectedFieldsJson = serializeCollectedFields(cleaned);
+    }
   } catch {
-    title = "";
+    return NextResponse.json({ error: "잘못된 요청입니다." }, { status: 400 });
   }
 
   const adminSecret = randomUUID();
@@ -29,6 +39,7 @@ export async function POST(req: Request) {
           adminSecret,
           title: title || "무제 대회",
           ownerId: session.sub,
+          collectedFieldsJson,
         },
       });
       return NextResponse.json({

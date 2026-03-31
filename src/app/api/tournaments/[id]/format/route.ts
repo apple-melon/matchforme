@@ -32,6 +32,9 @@ export async function PATCH(req: Request, { params }: Params) {
   if (!format || !ALLOWED.includes(format as DrawFormat)) {
     return NextResponse.json({ error: "유효하지 않은 경기 방식입니다." }, { status: 400 });
   }
+  if (t.startedAt) {
+    return NextResponse.json({ error: "대회가 시작된 후에는 경기 방식을 바꿀 수 없습니다." }, { status: 400 });
+  }
 
   await prisma.tournament.update({
     where: { id },

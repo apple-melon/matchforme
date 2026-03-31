@@ -18,6 +18,9 @@ export async function POST(req: Request, { params }: Params) {
     include: { participants: true },
   });
   if (!t) return NextResponse.json({ error: "대회를 찾을 수 없습니다." }, { status: 404 });
+  if (t.startedAt) {
+    return NextResponse.json({ error: "대회가 시작된 후에는 대진을 다시 뽑을 수 없습니다." }, { status: 400 });
+  }
 
   const format = t.format as DrawFormat;
   const players = t.participants.map((p) => ({

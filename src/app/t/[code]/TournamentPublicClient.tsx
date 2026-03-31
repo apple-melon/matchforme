@@ -7,11 +7,13 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 type Payload = {
+  id: string;
   code: string;
   title: string;
   format: string;
   bracketJson: string | null;
   matchResultsJson: string | null;
+  startedAt: string | null;
   participantCount: number;
 };
 
@@ -24,6 +26,15 @@ function parseBracket(json: string | null): BracketData | null {
   }
 }
 
+async function fetchPublic(code: string): Promise<Payload> {
+  const res = await fetch(`/api/tournaments/public/${encodeURIComponent(code)}`, {
+    cache: "no-store",
+  });
+  const j = (await res.json()) as Payload & { error?: string };
+  if (!res.ok) throw new Error(j.error ?? "불러오지 못했습니다.");
+  return j;
+}
+
 export function TournamentPublicClient({ code }: { code: string }) {
   const digits = code.replace(/\D/g, "").slice(0, 6);
   const [data, setData] = useState<Payload | null>(null);
@@ -34,21 +45,31 @@ export function TournamentPublicClient({ code }: { code: string }) {
       setErr("6자리 숫자 코드가 아닙니다.");
       return;
     }
-    let c = false;
+    let cancelled = false;
     (async () => {
-      const res = await fetch(`/api/tournaments/public/${encodeURIComponent(digits)}`);
-      const j = (await res.json()) as Payload & { error?: string };
-      if (c) return;
-      if (!res.ok) {
-        setErr(j.error ?? "대회를 찾을 수 없습니다.");
-        return;
+      try {
+        const j = await fetchPublic(digits);
+        if (!cancelled) setData(j);
+      } catch (e) {
+        if (!cancelled) setErr(e instanceof Error ? e.message : "오류");
       }
-      setData(j);
     })();
     return () => {
-      c = true;
+      cancelled = true;
     };
   }, [digits]);
+
+  useEffect(() => {
+    if (digits.length !== 6 || !data?.id) return;
+    const tmr = setInterval(() => {
+      void fetchPublic(digits)
+        .then((j) => setData(j))
+        .catch(() => {
+          /* 네트워크 일시 오류는 무시 */
+        });
+    }, 2500);
+    return () => clearInterval(tmr);
+  }, [digits, data?.id]);
 
   const bracket = useMemo(() => parseBracket(data?.bracketJson ?? null), [data?.bracketJson]);
   const results = useMemo(() => parseMatchResultsJson(data?.matchResultsJson), [data?.matchResultsJson]);
@@ -81,15 +102,30 @@ export function TournamentPublicClient({ code }: { code: string }) {
     );
   }
 
+  const live = Boolean(data.startedAt);
+
   return (
     <div className="mx-auto max-w-5xl px-4 py-10">
       <p className="text-xs font-medium uppercase text-zinc-500">대회 진행 · 관람</p>
-      <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">{data.title}</h1>
+      <div className="mt-1 flex flex-wrap items-center gap-2">
+        <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">{data.title}</h1>
+        {live ? (
+          <span className="rounded-full bg-emerald-500/20 px-2.5 py-0.5 text-xs font-semibold text-emerald-800 dark:text-emerald-200">
+            LIVE · 약 2.5초마다 갱신
+          </span>
+        ) : (
+          <span className="rounded-full bg-zinc-200 px-2.5 py-0.5 text-xs font-medium text-zinc-600 dark:bg-zinc-700 dark:text-zinc-300">
+            대회 시작 전
+          </span>
+        )}
+      </div>
       <p className="mt-1 text-sm text-zinc-500">
         코드 <span className="font-mono font-semibold">{data.code}</span> · 참가 {data.participantCount}명
       </p>
       <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-        승패는 주최자가 기록합니다. 아래는 현재까지 반영된 대진과 결과입니다.
+        {live
+          ? "주최자가 기록한 경기 결과가 이 페이지에 실시간에 가깝게 반영됩니다."
+          : "주최자가 대회를 시작하면 여기에 승패가 표시됩니다."}
       </p>
 
       {!bracket ? (

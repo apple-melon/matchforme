@@ -3,6 +3,10 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import {
+  PARTICIPANT_FIELD_OPTIONS,
+  type ParticipantFieldKey,
+} from "@/lib/participant-fields";
 
 type Created = { id: string; code: string; title: string; adminSecret: string };
 
@@ -26,7 +30,7 @@ function downloadOperatorBundle(c: Created) {
     "[운영 링크 — 주최자만 보관]",
     manage,
     "",
-    "주최자는 로그인 후 '내 대회'에서도 운영 페이지를 열 수 있습니다.",
+    "주최자는 로그인 후 '프로필'에서도 운영 페이지를 열 수 있습니다.",
     "이 파일과 운영 링크는 타인에게 공유하지 마세요.",
   ].join("\n");
 
@@ -45,6 +49,7 @@ export default function CreateTournamentPage() {
   const [meChecked, setMeChecked] = useState(false);
   const [loggedIn, setLoggedIn] = useState(false);
   const [title, setTitle] = useState("");
+  const [collected, setCollected] = useState<ParticipantFieldKey[]>([]);
   const [creating, setCreating] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [created, setCreated] = useState<Created | null>(null);
@@ -63,6 +68,10 @@ export default function CreateTournamentPage() {
     };
   }, []);
 
+  function toggleField(key: ParticipantFieldKey) {
+    setCollected((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
+  }
+
   async function createTournament() {
     setErr(null);
     setCreating(true);
@@ -71,7 +80,10 @@ export default function CreateTournamentPage() {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: title.trim() || undefined }),
+        body: JSON.stringify({
+          title: title.trim() || undefined,
+          collectedFields: collected,
+        }),
       });
       const data = (await res.json()) as {
         id?: string;
@@ -144,7 +156,7 @@ export default function CreateTournamentPage() {
           <p className="mt-1 font-mono text-3xl font-bold tracking-[0.2em] text-foreground">{created.code}</p>
           <p className="mt-4 text-xs leading-relaxed text-muted">
             운영 비밀 링크는 분실 시 복구할 수 없습니다. 아래에서 텍스트 파일로 저장해 두세요. 로그인한 계정은
-            &quot;내 대회&quot;에서 언제든 운영 페이지로 들어갈 수 있습니다.
+            &quot;프로필&quot;에서 언제든 운영 페이지로 들어갈 수 있습니다.
           </p>
           <div className="mt-4 flex flex-col gap-2 sm:flex-row">
             <button
@@ -174,11 +186,29 @@ export default function CreateTournamentPage() {
               className="mt-1 w-full rounded-lg border border-card-border bg-background px-3 py-2 text-foreground outline-none ring-amber-500/40 focus:ring-2"
             />
           </label>
+          <div className="mt-6">
+            <p className="text-sm font-medium text-foreground">참가 시 받을 정보</p>
+            <p className="mt-1 text-xs text-muted">
+              이름은 항상 받습니다. 아래에서 추가로 받을 항목만 골라 주세요. (만든 뒤에는 바꿀 수 없습니다.)
+            </p>
+            <div className="mt-3 flex flex-wrap gap-3">
+              {PARTICIPANT_FIELD_OPTIONS.map((f) => (
+                <label key={f.key} className="flex cursor-pointer items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={collected.includes(f.key)}
+                    onChange={() => toggleField(f.key)}
+                  />
+                  <span>{f.label}</span>
+                </label>
+              ))}
+            </div>
+          </div>
           <button
             type="button"
             onClick={() => void createTournament()}
             disabled={creating}
-            className="mt-4 w-full rounded-lg bg-amber-500 py-2.5 text-sm font-semibold text-zinc-900 hover:bg-amber-400 disabled:opacity-60"
+            className="mt-6 w-full rounded-lg bg-amber-500 py-2.5 text-sm font-semibold text-zinc-900 hover:bg-amber-400 disabled:opacity-60"
           >
             {creating ? "만드는 중…" : "대회 만들기"}
           </button>

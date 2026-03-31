@@ -1,10 +1,5 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import {
-  PARTICIPANT_FIELD_OPTIONS,
-  type ParticipantFieldKey,
-  serializeCollectedFields,
-} from "@/lib/participant-fields";
 import type { SeedBy } from "@/lib/bracket";
 import { authorizeTournamentManage } from "@/lib/tournament-access";
 
@@ -19,9 +14,11 @@ export async function PATCH(req: Request, { params }: Params) {
   if (!auth.ok) {
     return NextResponse.json({ error: "운영 권한이 없습니다." }, { status: 403 });
   }
+  if (t.startedAt) {
+    return NextResponse.json({ error: "대회가 시작된 후에는 시드·조 개수를 바꿀 수 없습니다." }, { status: 400 });
+  }
 
   let body: {
-    collectedFields?: string[];
     splitClassCount?: number;
     seedBy?: string;
   };
@@ -31,22 +28,10 @@ export async function PATCH(req: Request, { params }: Params) {
     return NextResponse.json({ error: "잘못된 요청입니다." }, { status: 400 });
   }
 
-  const allowedKeys = new Set(PARTICIPANT_FIELD_OPTIONS.map((o) => o.key));
   const data: {
-    collectedFieldsJson?: string;
     splitClassCount?: number;
     seedBy?: string;
   } = {};
-
-  if (body.collectedFields !== undefined) {
-    if (!Array.isArray(body.collectedFields)) {
-      return NextResponse.json({ error: "collectedFields는 배열이어야 합니다." }, { status: 400 });
-    }
-    const cleaned = body.collectedFields.filter(
-      (k): k is ParticipantFieldKey => typeof k === "string" && allowedKeys.has(k as ParticipantFieldKey),
-    );
-    data.collectedFieldsJson = serializeCollectedFields(cleaned);
-  }
 
   if (body.splitClassCount !== undefined) {
     const n = Number(body.splitClassCount);

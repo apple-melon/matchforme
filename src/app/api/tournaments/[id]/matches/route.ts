@@ -17,6 +17,9 @@ export async function PATCH(req: Request, { params }: Params) {
   if (!t.bracketJson) {
     return NextResponse.json({ error: "먼저 대진을 생성해 주세요." }, { status: 400 });
   }
+  if (!t.startedAt) {
+    return NextResponse.json({ error: "운영 페이지에서 '대회 시작'을 먼저 눌러 주세요." }, { status: 400 });
+  }
 
   let body: { matchKey: string; winner: "left" | "right" | null };
   try {

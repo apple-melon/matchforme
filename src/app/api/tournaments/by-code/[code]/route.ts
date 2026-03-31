@@ -17,6 +17,7 @@ export async function GET(_req: Request, { params }: Params) {
       code: true,
       title: true,
       collectedFieldsJson: true,
+      startedAt: true,
       _count: { select: { participants: true } },
     },
   });
@@ -29,5 +30,6 @@ export async function GET(_req: Request, { params }: Params) {
     title: t.title,
     participantCount: t._count.participants,
     collectedFieldsJson: t.collectedFieldsJson,
+    startedAt: t.startedAt ? t.startedAt.toISOString() : null,
   });
 }

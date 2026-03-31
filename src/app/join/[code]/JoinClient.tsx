@@ -11,6 +11,7 @@ type Info = {
   title: string;
   participantCount: number;
   collectedFieldsJson?: string;
+  startedAt?: string | null;
 };
 
 function normalizeCode(raw: string): string {
@@ -66,7 +67,7 @@ export function JoinClient({ code }: { code: string }) {
     try {
       const body: Record<string, unknown> = {
         name: name.trim(),
-        affiliation: affiliation.trim(),
+        affiliation: wanted.includes("affiliation") ? affiliation.trim() : "",
       };
       if (wanted.includes("weightKg")) body.weightKg = Number(weightKg.replace(",", "."));
       if (wanted.includes("heightCm")) body.heightCm = Number(heightCm.replace(",", "."));
@@ -114,6 +115,28 @@ export function JoinClient({ code }: { code: string }) {
   if (!info) {
     return (
       <div className="flex min-h-[40vh] items-center justify-center text-sm text-zinc-500">불러오는 중…</div>
+    );
+  }
+
+  if (info.startedAt) {
+    return (
+      <div className="mx-auto max-w-md px-4 py-20 text-center">
+        <h1 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">참가 신청이 마감되었습니다</h1>
+        <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
+          {info.title}는 이미 시작된 대회입니다. 진행 상황은 공개 페이지에서 확인할 수 있습니다.
+        </p>
+        <Link
+          href={`/t/${info.code}`}
+          className="mt-8 inline-block rounded-lg bg-amber-500 px-5 py-2.5 text-sm font-semibold text-zinc-900"
+        >
+          진행 상황 보기
+        </Link>
+        <p className="mt-6">
+          <Link href="/" className="text-sm text-zinc-500 underline">
+            홈으로
+          </Link>
+        </p>
+      </div>
     );
   }
 
@@ -168,15 +191,17 @@ export function JoinClient({ code }: { code: string }) {
             className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-600 dark:bg-zinc-900"
           />
         </label>
-        <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-          소속
-          <input
-            required
-            value={affiliation}
-            onChange={(e) => setAffiliation(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-600 dark:bg-zinc-900"
-          />
-        </label>
+        {wanted.includes("affiliation") ? (
+          <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+            소속
+            <input
+              required
+              value={affiliation}
+              onChange={(e) => setAffiliation(e.target.value)}
+              className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-600 dark:bg-zinc-900"
+            />
+          </label>
+        ) : null}
         {wanted.includes("weightKg") ? (
           <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
             {PARTICIPANT_FIELD_OPTIONS.find((o) => o.key === "weightKg")?.label}

@@ -3,7 +3,7 @@
 import type { BracketData, DrawFormat, SeedBy } from "@/lib/bracket";
 import { BracketView } from "@/components/BracketView";
 import { PdfExportButton } from "@/components/PdfExportButton";
-import { PARTICIPANT_FIELD_OPTIONS, parseCollectedFieldsJson, type ParticipantFieldKey } from "@/lib/participant-fields";
+import { parseCollectedFieldsJson } from "@/lib/participant-fields";
 import type { MatchResults } from "@/lib/match-results";
 import { parseMatchResultsJson } from "@/lib/match-results";
 import Link from "next/link";
@@ -27,6 +27,7 @@ type TournamentPayload = {
   bracketJson: string | null;
   matchResultsJson: string | null;
   collectedFieldsJson: string;
+  startedAt: string | null;
   splitClassCount: number;
   seedBy: string;
   isOwner?: boolean;
@@ -126,6 +127,16 @@ function ManageInner({ tournamentId }: { tournamentId: string }) {
     void fetchData();
   }, [clientReady, fetchData]);
 
+  useEffect(() => {
+    if (!data?.startedAt) return;
+    const tmr = setInterval(() => void fetchData(), 2500);
+    return () => clearInterval(tmr);
+  }, [data?.startedAt, fetchData]);
+
+  useEffect(() => {
+    if (data?.startedAt && data?.bracketJson) setShowBracket(true);
+  }, [data?.startedAt, data?.bracketJson]);
+
   const bracket = useMemo(() => parseBracket(data?.bracketJson ?? null), [data?.bracketJson]);
 
   const collected = useMemo(
@@ -195,17 +206,35 @@ function ManageInner({ tournamentId }: { tournamentId: string }) {
         alert(j.error ?? "삭제 실패");
         return;
       }
-      router.push("/my");
+      router.push("/profile");
     } finally {
       setBusy(null);
     }
   }
 
-  async function patchSettings(partial: {
-    collectedFields?: ParticipantFieldKey[];
-    splitClassCount?: number;
-    seedBy?: SeedBy;
-  }) {
+  async function startTournament() {
+    if (!canManage || !data?.bracketJson) return;
+    if (!confirm("대회를 시작하면 대진·방식을 바꿀 수 없고, 이후부터 경기 결과만 기록할 수 있습니다. 진행할까요?")) return;
+    setBusy("start");
+    try {
+      const res = await fetch(`/api/tournaments/${tournamentId}/start`, {
+        method: "POST",
+        credentials: "include",
+        headers: manageHeaders(secret),
+      });
+      const j = (await res.json()) as { error?: string };
+      if (!res.ok) {
+        alert(j.error ?? "시작 처리 실패");
+        return;
+      }
+      await fetchData();
+      setShowBracket(true);
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function patchSettings(partial: { splitClassCount?: number; seedBy?: SeedBy }) {
     if (!canManage) return;
     setBusy("settings");
     try {
@@ -308,11 +337,6 @@ function ManageInner({ tournamentId }: { tournamentId: string }) {
     });
   }
 
-  function toggleField(key: ParticipantFieldKey) {
-    const next = collected.includes(key) ? collected.filter((k) => k !== key) : [...collected, key];
-    void patchSettings({ collectedFields: next });
-  }
-
   if (!clientReady) {
     return <ManageShell />;
   }
@@ -367,6 +391,11 @@ function ManageInner({ tournamentId }: { tournamentId: string }) {
           {data.isOwner ? (
             <p className="mt-2 text-xs text-zinc-500">주최자 계정으로 접속 중입니다.</p>
           ) : null}
+          {data.startedAt ? (
+            <p className="mt-2 rounded-lg bg-emerald-500/15 px-3 py-1.5 text-xs font-medium text-emerald-800 dark:text-emerald-200">
+              대회 진행 중 · 결과는 참가자 화면에도 주기적으로 반영됩니다.
+            </p>
+          ) : null}
         </div>
         <div className="flex flex-col gap-2 text-right text-sm">
           <span className="text-zinc-500">참가·진행 보기</span>
@@ -409,33 +438,18 @@ function ManageInner({ tournamentId }: { tournamentId: string }) {
         </div>
       </div>
 
-      <section className="mt-10 rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-950">
-        <h2 className="text-lg font-semibold">참가자에게 받을 정보</h2>
-        <p className="mt-1 text-sm text-zinc-500">
-          체크한 항목은 참가 신청 폼에 표시되며, 대진 시드·체급/키급 나누기에 사용할 수 있습니다.
-        </p>
-        <div className="mt-4 flex flex-wrap gap-4">
-          {PARTICIPANT_FIELD_OPTIONS.map((f) => (
-            <label key={f.key} className="flex cursor-pointer items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={collected.includes(f.key)}
-                onChange={() => toggleField(f.key)}
-                disabled={Boolean(busy)}
-              />
-              <span>{f.label}</span>
-            </label>
-          ))}
-        </div>
-      </section>
-
       <section className="mt-8 rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-950">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <h2 className="text-lg font-semibold">참가자 ({data.participants.length}명)</h2>
+          <div>
+            <h2 className="text-lg font-semibold">참가자 ({data.participants.length}명)</h2>
+            {data.startedAt ? (
+              <p className="mt-1 text-xs text-zinc-500">대회 시작 후에는 참가자 삭제가 비활성화됩니다.</p>
+            ) : null}
+          </div>
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
-              disabled={Boolean(busy)}
+              disabled={Boolean(busy) || Boolean(data.startedAt)}
               onClick={() => void deleteParticipants(false)}
               className="rounded-lg border border-zinc-300 px-3 py-1.5 text-sm dark:border-zinc-600"
             >
@@ -443,7 +457,7 @@ function ManageInner({ tournamentId }: { tournamentId: string }) {
             </button>
             <button
               type="button"
-              disabled={Boolean(busy)}
+              disabled={Boolean(busy) || Boolean(data.startedAt)}
               onClick={() => void deleteParticipants(true)}
               className="rounded-lg border border-red-300 px-3 py-1.5 text-sm text-red-700 dark:border-red-800 dark:text-red-400"
             >
@@ -456,7 +470,7 @@ function ManageInner({ tournamentId }: { tournamentId: string }) {
             <thead className="bg-zinc-50 text-xs uppercase text-zinc-500 dark:bg-zinc-900">
               <tr>
                 <th className="w-10 px-3 py-2" />
-                <th className="px-3 py-2">소속</th>
+                {collected.includes("affiliation") ? <th className="px-3 py-2">소속</th> : null}
                 <th className="px-3 py-2">이름</th>
                 {collected.includes("weightKg") ? <th className="px-3 py-2">몸무게</th> : null}
                 {collected.includes("heightCm") ? <th className="px-3 py-2">키</th> : null}
@@ -471,10 +485,13 @@ function ManageInner({ tournamentId }: { tournamentId: string }) {
                       type="checkbox"
                       checked={selected.has(p.id)}
                       onChange={() => toggle(p.id)}
+                      disabled={Boolean(data.startedAt)}
                       aria-label={`${p.name} 선택`}
                     />
                   </td>
-                  <td className="px-3 py-2 text-zinc-700 dark:text-zinc-300">{p.affiliation}</td>
+                  {collected.includes("affiliation") ? (
+                    <td className="px-3 py-2 text-zinc-700 dark:text-zinc-300">{p.affiliation || "—"}</td>
+                  ) : null}
                   <td className="px-3 py-2 font-medium text-zinc-900 dark:text-zinc-100">{p.name}</td>
                   {collected.includes("weightKg") ? (
                     <td className="px-3 py-2 text-zinc-600">{p.weightKg != null ? `${p.weightKg}` : "—"}</td>
@@ -503,7 +520,7 @@ function ManageInner({ tournamentId }: { tournamentId: string }) {
             <span className="font-medium text-zinc-700 dark:text-zinc-300">시드 (배열 순서)</span>
             <select
               value={seedBy}
-              disabled={Boolean(busy)}
+              disabled={Boolean(busy) || Boolean(data.startedAt)}
               onChange={(e) => void patchSettings({ seedBy: e.target.value as SeedBy })}
               className="rounded-lg border border-zinc-300 bg-white px-3 py-2 dark:border-zinc-600 dark:bg-zinc-900"
             >
@@ -520,7 +537,7 @@ function ManageInner({ tournamentId }: { tournamentId: string }) {
             <span className="font-medium text-zinc-700 dark:text-zinc-300">체급/키급 나누기 — 조 개수</span>
             <select
               value={data.splitClassCount}
-              disabled={Boolean(busy)}
+              disabled={Boolean(busy) || Boolean(data.startedAt)}
               onChange={(e) => void patchSettings({ splitClassCount: Number(e.target.value) })}
               className="rounded-lg border border-zinc-300 bg-white px-3 py-2 dark:border-zinc-600 dark:bg-zinc-900"
             >
@@ -554,6 +571,7 @@ function ManageInner({ tournamentId }: { tournamentId: string }) {
                   name="format"
                   checked={currentFormat === f.value}
                   onChange={() => void patchFormat(f.value)}
+                  disabled={Boolean(data.startedAt)}
                   className="mt-1"
                 />
                 <span>
@@ -566,12 +584,15 @@ function ManageInner({ tournamentId }: { tournamentId: string }) {
         </div>
         <button
           type="button"
-          disabled={Boolean(busy) || !canDraw}
+          disabled={Boolean(busy) || !canDraw || Boolean(data.startedAt)}
           onClick={() => void runDraw()}
           className="mt-6 rounded-lg bg-amber-500 px-5 py-2.5 text-sm font-semibold text-zinc-900 disabled:opacity-50"
         >
           {busy === "draw" ? "대진 생성 중…" : "대진 생성 (매칭)"}
         </button>
+        {data.startedAt ? (
+          <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">대회가 시작되어 대진을 다시 뽑을 수 없습니다.</p>
+        ) : null}
         {!canDraw ? (
           <p className="mt-2 text-xs text-zinc-500">
             {currentFormat === "WEIGHT_CLASS" || currentFormat === "HEIGHT_CLASS"
@@ -594,18 +615,46 @@ function ManageInner({ tournamentId }: { tournamentId: string }) {
           {showBracket && bracket ? (
             <PdfExportButton fileName={`${data.title}-대진표`} targetId={PRINT_ID} />
           ) : null}
+          {bracket && !data.startedAt ? (
+            <button
+              type="button"
+              disabled={Boolean(busy)}
+              onClick={() => void startTournament()}
+              className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-500 disabled:opacity-50"
+            >
+              {busy === "start" ? "처리 중…" : "대회 시작"}
+            </button>
+          ) : null}
         </div>
         <p className="mt-2 text-xs text-zinc-500">
-          대진표에서 각 경기의 승자를 기록하면 참가자·관람 페이지(/t/코드)에도 동일하게 반영됩니다.
+          대진이 마음에 들면 <strong className="text-zinc-700 dark:text-zinc-300">대회 시작</strong>을 누른 뒤, 아래
+          &quot;결과 반영&quot;에서 승자를 기록하세요. 시작 전에는 미리보기만 가능합니다.
         </p>
 
-        {showBracket && bracket ? (
+        {showBracket && bracket && !data.startedAt ? (
           <div
             id={PRINT_ID}
             className="mt-6 rounded-2xl border border-zinc-200 bg-white p-6 text-zinc-900 shadow-sm print:border-0 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
           >
             <p className="text-xs text-zinc-500">{data.title}</p>
-            <h2 className="text-xl font-bold">대진표 · 경기 결과</h2>
+            <h2 className="text-xl font-bold">대진표 (미리보기)</h2>
+            <p className="mt-1 text-sm text-zinc-500">대회 시작 후에만 승패를 기록할 수 있습니다.</p>
+            <div className="mt-6">
+              <BracketView data={bracket} results={matchResults} editable={false} />
+            </div>
+          </div>
+        ) : null}
+
+        {showBracket && bracket && data.startedAt ? (
+          <div
+            id={PRINT_ID}
+            className="mt-6 rounded-2xl border-2 border-emerald-500/40 bg-white p-6 text-zinc-900 shadow-sm print:border-0 dark:border-emerald-600/40 dark:bg-zinc-950 dark:text-zinc-100"
+          >
+            <p className="text-xs text-zinc-500">{data.title}</p>
+            <h2 className="text-xl font-bold text-emerald-800 dark:text-emerald-200">결과 반영 · 경기 기록</h2>
+            <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+              대진표에서 이긴 쪽을 누르면 참가자가 보는 페이지(/t/코드)에도 곧바로 반영됩니다.
+            </p>
             <div className="mt-6">
               <BracketView
                 data={bracket}
@@ -615,11 +664,11 @@ function ManageInner({ tournamentId }: { tournamentId: string }) {
               />
             </div>
           </div>
-        ) : (
-          <p className="mt-4 text-sm text-zinc-500">
-            먼저 대진 생성으로 매칭한 뒤 &quot;대진표 보기&quot;를 누르세요.
-          </p>
-        )}
+        ) : null}
+
+        {!bracket ? (
+          <p className="mt-4 text-sm text-zinc-500">먼저 대진 생성으로 매칭한 뒤 대진표를 확인하세요.</p>
+        ) : null}
       </section>
 
       <p className="mt-12 text-center text-sm">

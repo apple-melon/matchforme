@@ -20,6 +20,7 @@ export async function GET(_req: Request, { params }: Params) {
       format: true,
       bracketJson: true,
       matchResultsJson: true,
+      startedAt: true,
       _count: { select: { participants: true } },
     },
   });
@@ -35,6 +36,7 @@ export async function GET(_req: Request, { params }: Params) {
     format: t.format,
     bracketJson: t.bracketJson,
     matchResultsJson: t.matchResultsJson,
+    startedAt: t.startedAt ? t.startedAt.toISOString() : null,
     participantCount: t._count.participants,
   });
 }

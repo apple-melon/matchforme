@@ -30,6 +30,8 @@ model Tournament {
   seedBy              String         @default("random")
   ownerId             String?
   owner               User?          @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+  // 대회 시작 시각 — 이후에만 경기 결과 입력 가능
+  startedAt           DateTime?
   createdAt           DateTime       @default(now())
   participants        Participant[]
 

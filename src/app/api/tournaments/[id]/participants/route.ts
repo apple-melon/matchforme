@@ -11,6 +11,9 @@ export async function DELETE(req: Request, { params }: Params) {
   if (!auth.ok) {
     return NextResponse.json({ error: "운영 권한이 없습니다." }, { status: 403 });
   }
+  if (t.startedAt) {
+    return NextResponse.json({ error: "대회가 시작된 후에는 참가자를 삭제할 수 없습니다." }, { status: 400 });
+  }
 
   let ids: string[] | undefined;
   let all = false;
