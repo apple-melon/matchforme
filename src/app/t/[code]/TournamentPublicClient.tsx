@@ -7,6 +7,7 @@ import {
   parseMatchResultsJson,
   resolveBracketDisplayData,
 } from "@/lib/match-results";
+import { DashboardShell } from "@/components/DashboardShell";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
@@ -127,26 +128,24 @@ export function TournamentPublicClient({ code }: { code: string }) {
   const ended = Boolean(data.endedAt);
 
   return (
-    <div className="mx-auto max-w-5xl px-3 py-6 sm:px-4 sm:py-10">
-      <p className="text-xs font-medium uppercase text-zinc-500">대회 진행 · 관람</p>
-      <div className="mt-1 flex flex-wrap items-center gap-2">
-        <h1 className="min-w-0 flex-1 text-xl font-bold leading-snug text-zinc-900 sm:text-2xl dark:text-zinc-50">
-          {data.title}
-        </h1>
-        {ended ? (
-          <span className="rounded-full bg-zinc-300/90 px-2.5 py-0.5 text-xs font-semibold text-zinc-800 dark:bg-zinc-600 dark:text-zinc-100">
-            대회 종료
-          </span>
-        ) : live ? (
-          <span className="rounded-full bg-emerald-500/20 px-2.5 py-0.5 text-xs font-semibold text-emerald-800 dark:text-emerald-200">
-            LIVE · 약 2.5초마다 갱신
-          </span>
-        ) : (
-          <span className="rounded-full bg-zinc-200 px-2.5 py-0.5 text-xs font-medium text-zinc-600 dark:bg-zinc-700 dark:text-zinc-300">
-            대회 시작 전
-          </span>
-        )}
-      </div>
+    <DashboardShell title={data.title} subtitle={`대회 코드 · ${data.code}`} showSidebar={false}>
+      <div className="mx-auto max-w-5xl px-3 py-6 sm:px-4 sm:py-10">
+        <p className="text-xs font-medium uppercase text-zinc-500">대회 진행 · 관람</p>
+        <div className="mt-1 flex flex-wrap items-center gap-2">
+          {ended ? (
+            <span className="rounded-full bg-zinc-300/90 px-2.5 py-0.5 text-xs font-semibold text-zinc-800 dark:bg-zinc-600 dark:text-zinc-100">
+              대회 종료
+            </span>
+          ) : live ? (
+            <span className="rounded-full bg-emerald-500/20 px-2.5 py-0.5 text-xs font-semibold text-emerald-800 dark:text-emerald-200">
+              LIVE · 약 2.5초마다 갱신
+            </span>
+          ) : (
+            <span className="rounded-full bg-zinc-200 px-2.5 py-0.5 text-xs font-medium text-zinc-600 dark:bg-zinc-700 dark:text-zinc-300">
+              대회 시작 전
+            </span>
+          )}
+        </div>
       <p className="mt-1 text-sm text-zinc-500">
         코드 <span className="font-mono font-semibold">{data.code}</span> · 참가 {data.participantCount}명
       </p>
@@ -301,5 +300,6 @@ export function TournamentPublicClient({ code }: { code: string }) {
         </Link>
       </p>
     </div>
+    </DashboardShell>
   );
 }

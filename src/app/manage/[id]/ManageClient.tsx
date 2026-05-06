@@ -12,6 +12,7 @@ import {
   parseMatchResultsJson,
   resolveBracketDisplayData,
 } from "@/lib/match-results";
+import { DashboardShell } from "@/components/DashboardShell";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
@@ -428,32 +429,33 @@ function ManageInner({ tournamentId }: { tournamentId: string }) {
   const canDraw = data.participants.length >= minPlayers;
 
   return (
-    <div className="mx-auto max-w-4xl px-3 py-6 sm:px-4 sm:py-10">
+    <DashboardShell title={data.title} subtitle={`대회 코드 · ${data.code}`} activeKey="home">
+      <div className="mx-auto max-w-4xl px-3 py-6 sm:px-4 sm:py-10">
       <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
-        <div className="min-w-0">
-          <p className="text-xs font-medium uppercase text-zinc-500">대회 운영</p>
-          <h1 className="text-xl font-bold leading-snug text-zinc-900 sm:text-2xl dark:text-zinc-50">{data.title}</h1>
+        <div className="min-w-0 rounded-2xl bg-gradient-to-r from-red-600 to-red-500 p-6 text-white shadow-sm">
+          <p className="text-xs font-medium uppercase tracking-wide text-white/80">대회 운영</p>
+          <h1 className="text-xl font-bold leading-snug text-white sm:text-2xl">{data.title}</h1>
           <div className="mt-3 flex flex-wrap items-center gap-2">
-            <span className="rounded-lg bg-zinc-100 px-3 py-2 font-mono text-base font-bold tracking-widest sm:text-lg dark:bg-zinc-800">
+            <span className="rounded-lg border border-white/20 bg-white/15 px-3 py-2 font-mono text-base font-bold tracking-widest text-white sm:text-lg">
               {data.code}
             </span>
             <button
               type="button"
               onClick={() => void copyWithNotice(data.code, "참가 코드가 복사되었습니다.")}
-              className="min-h-10 rounded-lg px-2 text-sm text-accent underline sm:min-h-0"
+              className="min-h-10 rounded-lg px-2 text-sm text-white underline decoration-white/70 underline-offset-4 sm:min-h-0"
             >
               코드 복사
             </button>
           </div>
           {data.isOwner ? (
-            <p className="mt-2 text-xs text-zinc-500">주최자 계정으로 접속 중입니다.</p>
+            <p className="mt-2 text-xs text-white/80">주최자 계정으로 접속 중입니다.</p>
           ) : null}
           {data.endedAt ? (
-            <p className="mt-2 rounded-lg bg-zinc-200/90 px-3 py-1.5 text-xs font-medium text-zinc-800 dark:bg-zinc-700/80 dark:text-zinc-100">
+            <p className="mt-2 rounded-lg border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-medium text-white/90">
               대회 종료됨 · 경기 결과 수정 불가
             </p>
           ) : data.startedAt ? (
-            <p className="mt-2 rounded-lg bg-emerald-500/15 px-3 py-1.5 text-xs font-medium text-emerald-800 dark:text-emerald-200">
+            <p className="mt-2 rounded-lg border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-medium text-white/90">
               대회 진행 중 · 결과는 참가자 화면에도 주기적으로 반영됩니다.
             </p>
           ) : null}
@@ -849,7 +851,8 @@ function ManageInner({ tournamentId }: { tournamentId: string }) {
           홈으로
         </Link>
       </p>
-    </div>
+      </div>
+    </DashboardShell>
   );
 }
 

@@ -3,8 +3,14 @@
 import Link from "next/link";
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 
 export function SiteHeader() {
+  const pathname = usePathname();
+  const hideOnDashboard = Boolean(pathname?.startsWith("/manage") || pathname?.startsWith("/t/"));
+
+  if (hideOnDashboard) return null;
+
   const [loggedIn, setLoggedIn] = useState(false);
 
   useEffect(() => {
