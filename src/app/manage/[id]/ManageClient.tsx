@@ -12,7 +12,7 @@ import {
   parseMatchResultsJson,
   resolveBracketDisplayData,
 } from "@/lib/match-results";
-import { DashboardShell } from "@/components/DashboardShell";
+import { DashboardShell, NAV_ICONS, type NavItem } from "@/components/DashboardShell";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
@@ -873,11 +873,29 @@ function ManageInner({ tournamentId }: { tournamentId: string }) {
     { key: "records", label: "기록" },
   ];
 
+  const manageSidebarItems: NavItem[] = [
+    { key: "home",         label: "홈",     icon: NAV_ICONS.home,         href: "/" },
+    { key: "tournament",   label: "토너먼트", icon: NAV_ICONS.tournament,   href: "/my" },
+    { key: "bracket",      label: "대진표",  icon: NAV_ICONS.bracket,      onClick: () => setActiveTab("match") },
+    { key: "participants", label: "참가팀",  icon: NAV_ICONS.participants,  onClick: () => setActiveTab("participants") },
+    { key: "schedule",     label: "일정",    icon: NAV_ICONS.schedule,     onClick: () => setActiveTab("match") },
+    { key: "records",      label: "기록",    icon: NAV_ICONS.records,      onClick: () => setActiveTab("records") },
+    { key: "settings",     label: "설정",    icon: NAV_ICONS.settings,     onClick: () => setActiveTab("info") },
+  ];
+
+  const tabToSidebarKey: Record<string, string> = {
+    info: "settings",
+    participants: "participants",
+    match: "bracket",
+    records: "records",
+  };
+
   return (
     <DashboardShell
       title={data.title || "무제 대회"}
       breadcrumb={[{ label: "대진표", href: "/my" }, { label: data.title || "무제 대회" }]}
-      activeKey="bracket"
+      sidebarItems={manageSidebarItems}
+      activeKey={tabToSidebarKey[activeTab] ?? "bracket"}
       topRight={
         <Link href={publicProgressUrl || "#"} className="rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500 transition">
           대진표 보기
