@@ -5,7 +5,13 @@ import { usePathname } from "next/navigation";
 
 export function SiteFooter() {
   const pathname = usePathname();
-  const hideOnDashboard = Boolean(pathname?.startsWith("/manage") || pathname?.startsWith("/t/"));
+  const hideOnDashboard = Boolean(
+    pathname === "/" ||
+    pathname?.startsWith("/manage") ||
+    pathname?.startsWith("/t/") ||
+    pathname?.startsWith("/my") ||
+    pathname?.startsWith("/profile")
+  );
 
   if (hideOnDashboard) return null;
 

@@ -7,7 +7,13 @@ import { usePathname } from "next/navigation";
 
 export function SiteHeader() {
   const pathname = usePathname();
-  const hideOnDashboard = Boolean(pathname?.startsWith("/manage") || pathname?.startsWith("/t/"));
+  const hideOnDashboard = Boolean(
+    pathname === "/" ||
+    pathname?.startsWith("/manage") ||
+    pathname?.startsWith("/t/") ||
+    pathname?.startsWith("/my") ||
+    pathname?.startsWith("/profile")
+  );
 
   if (hideOnDashboard) return null;
 
@@ -38,7 +44,7 @@ export function SiteHeader() {
             className="mr-1.5 inline-block h-2 w-2 rounded-sm bg-accent align-middle transition-transform duration-200 group-hover:scale-110"
             aria-hidden
           />
-          <span className="group-hover:text-accent">MATCH FOR ME</span>
+          <span className="group-hover:text-accent">강인 매치</span>
         </Link>
 
         <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-1.5 sm:gap-3">

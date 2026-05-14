@@ -16,6 +16,8 @@ export async function GET() {
       code: true,
       title: true,
       createdAt: true,
+      startedAt: true,
+      endedAt: true,
       _count: { select: { participants: true } },
     },
   });
@@ -26,6 +28,8 @@ export async function GET() {
       code: t.code,
       title: t.title,
       createdAt: t.createdAt,
+      startedAt: t.startedAt,
+      endedAt: t.endedAt,
       participantCount: t._count.participants,
     })),
   });

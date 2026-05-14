@@ -25,26 +25,35 @@ type Payload = {
 
 function parseBracket(json: string | null): BracketData | null {
   if (!json) return null;
-  try {
-    return JSON.parse(json) as BracketData;
-  } catch {
-    return null;
-  }
+  try { return JSON.parse(json) as BracketData; } catch { return null; }
 }
 
 async function fetchPublic(code: string): Promise<Payload> {
-  const res = await fetch(`/api/tournaments/public/${encodeURIComponent(code)}`, {
-    cache: "no-store",
-  });
+  const res = await fetch(`/api/tournaments/public/${encodeURIComponent(code)}`, { cache: "no-store" });
   const j = (await res.json()) as Payload & { error?: string };
   if (!res.ok) throw new Error(j.error ?? "불러오지 못했습니다.");
   return j;
+}
+
+function getRoundLabel(format: string, roundIndex: number, totalRounds: number): string {
+  if (format !== "TOURNAMENT" && format !== "WEIGHT_CLASS" && format !== "HEIGHT_CLASS") {
+    return `라운드 ${roundIndex + 1}`;
+  }
+  const diff = totalRounds - 1 - roundIndex;
+  if (diff === 0) return "결승";
+  if (diff === 1) return "4강";
+  if (diff === 2) return "8강";
+  if (diff === 3) return "16강";
+  if (diff === 4) return "32강";
+  if (diff === 5) return "64강";
+  return `${Math.pow(2, diff + 1)}강`;
 }
 
 export function TournamentPublicClient({ code }: { code: string }) {
   const digits = code.replace(/\D/g, "").slice(0, 6);
   const [data, setData] = useState<Payload | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [activeView, setActiveView] = useState<"bracket" | "schedule">("bracket");
 
   useEffect(() => {
     if (digits.length !== 6) return;
@@ -57,9 +66,7 @@ export function TournamentPublicClient({ code }: { code: string }) {
         if (!cancelled) setErr(e instanceof Error ? e.message : "오류");
       }
     })();
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [digits]);
 
   useEffect(() => {
@@ -67,9 +74,7 @@ export function TournamentPublicClient({ code }: { code: string }) {
     const tmr = setInterval(() => {
       void fetchPublic(digits)
         .then((j) => setData(j))
-        .catch(() => {
-          /* 네트워크 일시 오류는 무시 */
-        });
+        .catch(() => {});
     }, 2500);
     return () => clearInterval(tmr);
   }, [digits, data?.id, data?.endedAt]);
@@ -89,217 +94,253 @@ export function TournamentPublicClient({ code }: { code: string }) {
     [displayBracket],
   );
 
-  const isBracketTreeFormat = Boolean(
-    bracket &&
-      (bracket.format === "TOURNAMENT" ||
-        bracket.format === "WEIGHT_CLASS" ||
-        bracket.format === "HEIGHT_CLASS"),
-  );
-
   if (digits.length !== 6) {
     return (
-      <div className="mx-auto max-w-lg px-4 py-16 text-center text-red-600">
-        올바른 코드가 아닙니다.
-        <Link href="/" className="mt-4 block text-accent underline">
-          홈으로
-        </Link>
-      </div>
+      <DashboardShell title="대회 없음" showSidebar={false}>
+        <div className="mx-auto max-w-lg px-4 py-16 text-center text-red-600">
+          올바른 코드가 아닙니다.
+          <Link href="/" className="mt-4 block text-red-600 underline">홈으로</Link>
+        </div>
+      </DashboardShell>
     );
   }
 
   if (err) {
     return (
-      <div className="mx-auto max-w-lg px-4 py-16 text-center">
-        <p className="text-red-600 dark:text-red-400">{err}</p>
-        <Link href="/" className="mt-6 inline-block text-accent underline">
-          홈으로
-        </Link>
-      </div>
+      <DashboardShell title="오류" showSidebar={false}>
+        <div className="mx-auto max-w-lg px-4 py-16 text-center">
+          <p className="text-red-600 dark:text-red-400">{err}</p>
+          <Link href="/" className="mt-6 inline-block text-red-600 underline">홈으로</Link>
+        </div>
+      </DashboardShell>
     );
   }
 
   if (!data) {
     return (
-      <div className="flex min-h-[40vh] items-center justify-center text-sm text-zinc-500">불러오는 중…</div>
+      <DashboardShell title="불러오는 중…" showSidebar={false}>
+        <div className="flex min-h-[40vh] items-center justify-center">
+          <div className="h-8 w-8 rounded-full border-2 border-red-500 border-t-transparent animate-spin" />
+        </div>
+      </DashboardShell>
     );
   }
 
   const live = Boolean(data.startedAt);
   const ended = Boolean(data.endedAt);
 
+  const isBracketTreeFormat = Boolean(
+    bracket && (bracket.format === "TOURNAMENT" || bracket.format === "WEIGHT_CLASS" || bracket.format === "HEIGHT_CLASS"),
+  );
+
+  const rounds = bracket?.format === "TOURNAMENT" ? (bracket as { rounds: { title: string }[] }).rounds : [];
+  const totalRounds = rounds.length;
+
   return (
-    <DashboardShell title={data.title} subtitle={`대회 코드 · ${data.code}`} showSidebar={false}>
-      <div className="mx-auto max-w-5xl px-3 py-6 sm:px-4 sm:py-10">
-        <p className="text-xs font-medium uppercase text-zinc-500">대회 진행 · 관람</p>
-        <div className="mt-1 flex flex-wrap items-center gap-2">
-          {ended ? (
-            <span className="rounded-full bg-zinc-300/90 px-2.5 py-0.5 text-xs font-semibold text-zinc-800 dark:bg-zinc-600 dark:text-zinc-100">
-              대회 종료
-            </span>
-          ) : live ? (
-            <span className="rounded-full bg-emerald-500/20 px-2.5 py-0.5 text-xs font-semibold text-emerald-800 dark:text-emerald-200">
-              LIVE · 약 2.5초마다 갱신
-            </span>
-          ) : (
-            <span className="rounded-full bg-zinc-200 px-2.5 py-0.5 text-xs font-medium text-zinc-600 dark:bg-zinc-700 dark:text-zinc-300">
-              대회 시작 전
-            </span>
+    <DashboardShell
+      title={data.title || "무제 대회"}
+      breadcrumb={[{ label: "대진표" }, { label: data.title || "무제 대회" }]}
+      showSidebar={false}
+      topRight={
+        live && !ended ? (
+          <span className="flex items-center gap-1.5 rounded-xl bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 dark:bg-red-950/40 dark:text-red-400">
+            <span className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" />
+            LIVE
+          </span>
+        ) : ended ? (
+          <span className="rounded-xl bg-zinc-100 px-3 py-1.5 text-xs font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">종료됨</span>
+        ) : (
+          <span className="rounded-xl bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-600 dark:bg-amber-950/40 dark:text-amber-400">대기 중</span>
+        )
+      }
+    >
+      <div className="p-4 sm:p-6">
+        {/* Info summary */}
+        <div className="flex flex-wrap items-center gap-3 text-sm text-zinc-500">
+          <span>코드 <span className="font-mono font-semibold text-zinc-700 dark:text-zinc-300">{data.code}</span></span>
+          <span>·</span>
+          <span>참가 {data.participantCount}명</span>
+          {live && !ended && (
+            <>
+              <span>·</span>
+              <span className="text-xs text-zinc-400">약 2.5초마다 자동 갱신</span>
+            </>
           )}
         </div>
-      <p className="mt-1 text-sm text-zinc-500">
-        코드 <span className="font-mono font-semibold">{data.code}</span> · 참가 {data.participantCount}명
-      </p>
-      <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-        {ended
-          ? "대회가 종료되었습니다. 아래에서 경기 순서와 대진표·기록을 확인할 수 있습니다."
-          : live
-            ? "주최자가 기록한 경기 결과가 이 페이지에 실시간에 가깝게 반영됩니다."
-            : "주최자가 대회를 시작하면 여기에 승패가 표시됩니다."}
-      </p>
 
-      {bracket && scheduleRows.length > 0 ? (
-        <nav className="mt-4 flex flex-wrap gap-3 text-sm">
-          <a href="#t-schedule" className="text-accent underline underline-offset-2">
-            경기 순서로 이동
-          </a>
-          <a href="#t-bracket" className="text-accent underline underline-offset-2">
-            대진표·기록으로 이동
-          </a>
-        </nav>
-      ) : bracket ? (
-        <nav className="mt-4 text-sm">
-          <a href="#t-bracket" className="text-accent underline underline-offset-2">
-            대진표·기록으로 이동
-          </a>
-        </nav>
-      ) : null}
-
-      {!bracket ? (
-        <p className="mt-10 rounded-xl border border-zinc-200 bg-card p-8 text-center text-sm text-zinc-500 dark:border-zinc-800">
-          아직 대진이 공개되지 않았습니다.
+        <p className="mt-2 text-sm text-zinc-500">
+          {ended
+            ? "대회가 종료되었습니다. 아래에서 경기 순서와 대진표를 확인할 수 있습니다."
+            : live
+              ? "주최자가 기록한 경기 결과가 실시간에 가깝게 반영됩니다."
+              : "주최자가 대회를 시작하면 여기에 승패가 표시됩니다."}
         </p>
-      ) : (
-        <>
-          {isBracketTreeFormat ? (
-            <section
-              id="t-bracket"
-              className="scroll-mt-24 mt-8 rounded-2xl border border-zinc-200 bg-white p-4 sm:p-5 dark:border-zinc-800 dark:bg-zinc-950"
-            >
-              <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">대진표 · 경기 기록</h2>
-              <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-                선으로 이어진 매치가 라운드 진행을 나타냅니다.{" "}
-                <span className="font-medium text-emerald-700 dark:text-emerald-300">강조</span>는 승자, 취소선은 패자
-                입니다.
-              </p>
-              <div className="mt-4 overflow-x-auto">
-                <BracketView data={displayBracket ?? bracket} results={results} />
+
+        {!bracket ? (
+          <div className="mt-10 rounded-2xl border border-dashed border-zinc-300 p-12 text-center text-sm text-zinc-400 dark:border-zinc-700">
+            <svg viewBox="0 0 24 24" fill="none" className="mx-auto mb-3 h-10 w-10 text-zinc-300" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+              <path d="M10 7H7a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h3M14 7h3a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2h-3M10 12h4" />
+            </svg>
+            아직 대진이 공개되지 않았습니다.
+          </div>
+        ) : (
+          <div className="mt-6">
+            {/* Round tab navigation for tournament bracket formats */}
+            {isBracketTreeFormat && totalRounds > 1 && (
+              <div className="mb-4 flex items-center justify-between">
+                <div className="flex flex-wrap gap-1.5">
+                  {rounds.map((r, idx) => {
+                    const label = getRoundLabel(bracket.format, idx, totalRounds);
+                    return (
+                      <button
+                        key={idx}
+                        type="button"
+                        className={[
+                          "rounded-xl px-3 py-1.5 text-xs font-semibold transition",
+                          label === getRoundLabel(bracket.format, totalRounds - 1, totalRounds)
+                            ? "bg-red-600 text-white shadow-sm"
+                            : "border border-zinc-200 bg-white text-zinc-600 hover:border-red-300 hover:text-red-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400",
+                        ].join(" ")}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="flex gap-1.5">
+                  <button className="rounded-xl border border-zinc-200 p-2 text-zinc-500 hover:border-zinc-300 dark:border-zinc-700 transition">
+                    <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                      <path d="M5 3v4M3 5h4M6 17v4M4 19h4M13 3l4 4-4 4M17 7H10M13 21l-4-4 4-4M3 17h7" />
+                    </svg>
+                  </button>
+                </div>
               </div>
-            </section>
-          ) : null}
+            )}
 
-          {scheduleRows.length > 0 ? (
-            <section
-              id="t-schedule"
-              className="scroll-mt-24 mt-8 rounded-2xl border border-zinc-200 bg-white p-4 sm:p-5 dark:border-zinc-800 dark:bg-zinc-950"
-            >
-              <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">경기 순서</h2>
-              <p className="mt-1 text-xs text-zinc-500">
-                라운드·조 흐름 순입니다. 토너먼트는 앞 라운드 종료 후 다음 경기가 열립니다.
-              </p>
-              <div className="mt-4 max-h-[min(50vh,28rem)] overflow-y-auto rounded-xl border border-zinc-100 dark:border-zinc-800">
-                <table className="w-full min-w-[280px] text-left text-sm">
-                  <thead className="sticky top-0 bg-zinc-50 text-xs uppercase text-zinc-500 dark:bg-zinc-900">
-                    <tr>
-                      <th className="w-12 px-3 py-2">#</th>
-                      <th className="px-3 py-2">구분</th>
-                      <th className="px-3 py-2">라운드</th>
-                      <th className="px-3 py-2">대진</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {scheduleRows.map((row) => {
-                      const k = row.key ?? row.id;
-                      const w = results[k];
-                      return (
-                        <tr
-                          key={`${row.order}-${row.id}-${row.section}`}
-                          className="border-t border-zinc-100 dark:border-zinc-800"
-                        >
-                          <td className="whitespace-nowrap px-3 py-2 text-zinc-500">{row.order}</td>
-                          <td className="max-w-[120px] truncate px-3 py-2 text-zinc-600 dark:text-zinc-400" title={row.section}>
-                            {row.section || "—"}
-                          </td>
-                          <td className="max-w-[100px] truncate px-3 py-2 text-zinc-600 dark:text-zinc-400" title={row.roundTitle}>
-                            {row.roundTitle}
-                          </td>
-                          <td className="px-3 py-2">
-                            <span className="font-mono text-xs text-zinc-400">{row.id}</span>
-                            <div className="mt-0.5 text-zinc-800 dark:text-zinc-200">
-                              <span
-                                className={
-                                  w === "left"
-                                    ? "font-semibold text-emerald-700 dark:text-emerald-300"
-                                    : w === "right"
-                                      ? "text-zinc-500 line-through decoration-zinc-400 dark:text-zinc-500"
-                                      : ""
-                                }
-                              >
-                                {row.left}
-                              </span>
-                              <span className="mx-1 text-accent">vs</span>
-                              <span
-                                className={
-                                  w === "right"
-                                    ? "font-semibold text-emerald-700 dark:text-emerald-300"
-                                    : w === "left"
-                                      ? "text-zinc-500 line-through decoration-zinc-400 dark:text-zinc-500"
-                                      : ""
-                                }
-                              >
-                                {row.right}
-                              </span>
-                            </div>
-                            {live && w != null ? (
-                              <p className="mt-1 text-[11px] text-zinc-500">
-                                결과: {w === "left" ? row.left : row.right} 승
-                              </p>
-                            ) : null}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+            {/* View switch tabs */}
+            {scheduleRows.length > 0 && (
+              <div className="mb-4 border-b border-zinc-200 dark:border-zinc-800">
+                <nav className="flex gap-0">
+                  {[
+                    { key: "bracket" as const, label: "대진표" },
+                    { key: "schedule" as const, label: "경기 순서" },
+                  ].map((tab) => (
+                    <button
+                      key={tab.key}
+                      type="button"
+                      onClick={() => setActiveView(tab.key)}
+                      className={[
+                        "relative px-4 py-3 text-sm font-medium transition-colors",
+                        activeView === tab.key
+                          ? "text-red-600 dark:text-red-400"
+                          : "text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200",
+                      ].join(" ")}
+                    >
+                      {tab.label}
+                      {activeView === tab.key && (
+                        <span className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full bg-red-500" />
+                      )}
+                    </button>
+                  ))}
+                </nav>
               </div>
-            </section>
-          ) : null}
+            )}
 
-          {!isBracketTreeFormat ? (
-            <div
-              id="t-bracket"
-              className="scroll-mt-24 mt-8 rounded-2xl border border-zinc-200 bg-white p-4 sm:p-6 dark:border-zinc-800 dark:bg-zinc-950"
-            >
-              <h2 className="mb-4 text-lg font-semibold text-zinc-900 dark:text-zinc-50">대회 진행 상황 · 대진표 · 경기 기록</h2>
-              <BracketView data={displayBracket ?? bracket} results={results} />
-            </div>
-          ) : null}
-        </>
-      )}
+            {/* Bracket view */}
+            {(activeView === "bracket" || scheduleRows.length === 0) && (
+              <div
+                id="t-bracket"
+                className="scroll-mt-24 rounded-2xl border border-zinc-200 bg-white p-4 sm:p-5 dark:border-zinc-800 dark:bg-zinc-950"
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-base font-bold text-zinc-900 dark:text-zinc-50">대진표 · 경기 기록</h2>
+                  {isBracketTreeFormat && (
+                    <p className="text-xs text-zinc-500">
+                      <span className="font-medium text-emerald-600 dark:text-emerald-400">강조</span> = 승자
+                    </p>
+                  )}
+                </div>
+                <div className="overflow-x-auto">
+                  <BracketView data={displayBracket ?? bracket} results={results} />
+                </div>
+              </div>
+            )}
 
-      <p className="mt-10 text-center text-sm">
-        <Link href={`/join/${data.code}`} className="text-accent underline">
-          참가 신청 페이지
-        </Link>
-        {" · "}
-        <Link href="/profile" className="text-zinc-500 underline">
-          프로필
-        </Link>
-        {" · "}
-        <Link href="/" className="text-zinc-500 underline">
-          홈
-        </Link>
-      </p>
-    </div>
+            {/* Schedule view */}
+            {activeView === "schedule" && scheduleRows.length > 0 && (
+              <div id="t-schedule" className="scroll-mt-24 rounded-2xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950">
+                <div className="border-b border-zinc-100 px-5 py-4 dark:border-zinc-800">
+                  <h2 className="text-base font-bold text-zinc-900 dark:text-zinc-50">경기 순서</h2>
+                  <p className="mt-0.5 text-xs text-zinc-500">라운드·조 흐름 순입니다.</p>
+                </div>
+                <div className="max-h-[min(60vh,32rem)] overflow-y-auto">
+                  <table className="w-full min-w-[280px] text-sm">
+                    <thead className="sticky top-0 border-b border-zinc-100 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900">
+                      <tr>
+                        <th className="w-12 px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-zinc-400">#</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-zinc-400">구분</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-zinc-400">라운드</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-zinc-400">대진</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {scheduleRows.map((row) => {
+                        const k = row.key ?? row.id;
+                        const w = results[k];
+                        return (
+                          <tr
+                            key={`${row.order}-${row.id}-${row.section}`}
+                            className="border-b border-zinc-50 hover:bg-zinc-50/60 dark:border-zinc-800/50 dark:hover:bg-zinc-800/30 transition"
+                          >
+                            <td className="px-4 py-3 text-zinc-400">{row.order}</td>
+                            <td className="max-w-[100px] truncate px-4 py-3 text-xs text-zinc-500" title={row.section}>
+                              {row.section || "—"}
+                            </td>
+                            <td className="max-w-[100px] truncate px-4 py-3 text-xs text-zinc-500" title={row.roundTitle}>
+                              {row.roundTitle}
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className={[
+                                  "text-sm font-medium",
+                                  w === "left" ? "text-emerald-700 dark:text-emerald-400" : w === "right" ? "text-zinc-400 line-through" : "text-zinc-800 dark:text-zinc-200",
+                                ].join(" ")}>
+                                  {row.left}
+                                </span>
+                                <span className="text-xs font-bold text-red-500">vs</span>
+                                <span className={[
+                                  "text-sm font-medium",
+                                  w === "right" ? "text-emerald-700 dark:text-emerald-400" : w === "left" ? "text-zinc-400 line-through" : "text-zinc-800 dark:text-zinc-200",
+                                ].join(" ")}>
+                                  {row.right}
+                                </span>
+                              </div>
+                              {live && w != null && (
+                                <p className="mt-0.5 text-[11px] text-zinc-400">
+                                  결과: {w === "left" ? row.left : row.right} 승
+                                </p>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Footer links */}
+        <div className="mt-8 flex flex-wrap gap-3 text-sm">
+          <Link href={`/join/${data.code}`} className="text-red-600 underline underline-offset-2 hover:text-red-500">참가 신청</Link>
+          <span className="text-zinc-300">·</span>
+          <Link href="/my" className="text-zinc-400 underline underline-offset-2 hover:text-zinc-600">내 토너먼트</Link>
+          <span className="text-zinc-300">·</span>
+          <Link href="/" className="text-zinc-400 underline underline-offset-2 hover:text-zinc-600">홈</Link>
+        </div>
+      </div>
     </DashboardShell>
   );
 }

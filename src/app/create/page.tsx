@@ -16,7 +16,7 @@ function downloadOperatorBundle(c: Created) {
   const join = `${origin}/join/${c.code}`;
   const progress = `${origin}/t/${c.code}`;
   const text = [
-    "MATCH FOR ME — 대회 운영 정보 (분실 시 복구 불가)",
+    "강인 매치 — 대회 운영 정보 (분실 시 복구 불가)",
     "",
     `대회명: ${c.title}`,
     `참가 코드 (6자리 숫자): ${c.code}`,
@@ -37,7 +37,7 @@ function downloadOperatorBundle(c: Created) {
   const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
-  a.download = `MATCH-FOR-ME-운영정보-${c.code}.txt`;
+  a.download = `강인매치-운영정보-${c.code}.txt`;
   document.body.appendChild(a);
   a.click();
   a.remove();
