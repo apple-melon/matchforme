@@ -26,5 +26,23 @@ export async function POST(req: Request, { params }: Params) {
     select: { endedAt: true },
   });
 
+  // 참가자들에게 종료 알림 (로그인한 참가자만)
+  const participantsWithUser = await prisma.participant.findMany({
+    where: { tournamentId: id, userId: { not: null } },
+    select: { userId: true },
+  });
+  const participantUserIds = [...new Set(participantsWithUser.map((p) => p.userId!))];
+  if (participantUserIds.length > 0) {
+    await prisma.notification.createMany({
+      data: participantUserIds.map((uid) => ({
+        userId: uid,
+        type: "TOURNAMENT_ENDED",
+        title: "대회 종료",
+        body: `「${t.title || "무제 대회"}」이(가) 종료되었습니다. 결과를 확인하세요.`,
+        link: `/t/${t.code}`,
+      })),
+    }).catch(() => {});
+  }
+
   return NextResponse.json({ ok: true, endedAt: updated.endedAt?.toISOString() ?? null });
 }

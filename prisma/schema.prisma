@@ -8,13 +8,28 @@ datasource db {
 }
 
 model User {
-  id           String         @id @default(cuid())
-  email        String         @unique
-  passwordHash String
-  name         String?
-  createdAt    DateTime       @default(now())
-  tournaments  Tournament[]
-  participants Participant[]
+  id            String         @id @default(cuid())
+  email         String         @unique
+  passwordHash  String
+  name          String?
+  createdAt     DateTime       @default(now())
+  tournaments   Tournament[]
+  participants  Participant[]
+  notifications Notification[]
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String
+  title     String
+  body      String
+  link      String?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
 }
 
 model Tournament {

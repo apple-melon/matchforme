@@ -42,5 +42,23 @@ export async function POST(req: Request, { params }: Params) {
     select: { startedAt: true },
   });
 
+  // 참가자들에게 시작 알림 (로그인한 참가자만)
+  const participantsWithUser = await prisma.participant.findMany({
+    where: { tournamentId: id, userId: { not: null } },
+    select: { userId: true },
+  });
+  const participantUserIds = [...new Set(participantsWithUser.map((p) => p.userId!))];
+  if (participantUserIds.length > 0) {
+    await prisma.notification.createMany({
+      data: participantUserIds.map((uid) => ({
+        userId: uid,
+        type: "TOURNAMENT_STARTED",
+        title: "대회 시작",
+        body: `「${t.title || "무제 대회"}」이(가) 시작되었습니다.`,
+        link: `/t/${t.code}`,
+      })),
+    }).catch(() => {});
+  }
+
   return NextResponse.json({ ok: true, startedAt: updated.startedAt?.toISOString() ?? null });
 }

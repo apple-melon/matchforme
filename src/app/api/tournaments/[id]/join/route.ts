@@ -70,6 +70,19 @@ export async function POST(req: Request, { params }: Params) {
     },
   });
 
+  // 대회 주최자에게 참가 알림
+  if (t.ownerId) {
+    await prisma.notification.create({
+      data: {
+        userId: t.ownerId,
+        type: "PARTICIPANT_JOINED",
+        title: "새 참가자 등록",
+        body: `${name}님이 「${t.title || "무제 대회"}」에 참가했습니다.`,
+        link: `/manage/${t.id}`,
+      },
+    }).catch(() => {}); // 알림 실패가 참가 등록을 막지 않도록
+  }
+
   return NextResponse.json({
     id: p.id,
     name: p.name,
