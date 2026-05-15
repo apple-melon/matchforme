@@ -11,13 +11,11 @@ type Props = {
   onSetWinner?: (matchKey: string, winner: "left" | "right" | null) => void;
 };
 
-const COL_W_DESKTOP = 260;
-const COL_W_MOBILE = 216;
-const CONNECTOR_W_DESKTOP = 36;
-const CONNECTOR_W_MOBILE = 28;
-/** 세로 간격 단위 — 라운드가 깊을수록 1라운드 매치 간 거리가 넓어짐 */
+const COL_W_DESKTOP = 220;
+const COL_W_MOBILE = 190;
+const CONNECTOR_W_DESKTOP = 32;
+const CONNECTOR_W_MOBILE = 24;
 const UNIT = 42;
-/** 라운드 제목 + 여백 (첫 경기 카드와 겹치지 않게) */
 const PAD_TOP = 52;
 const PAD_BOTTOM = 24;
 
@@ -26,7 +24,6 @@ function isByeLabel(text: string): boolean {
   return t === "부전승" || t.startsWith("부전승");
 }
 
-/** 각 라운드 매치 박스의 세로 중심(y) — 상단 기준 px */
 function computeMatchCentersY(rounds: DrawRound[]): number[][] {
   const R = rounds.length;
   if (R === 0) return [];
@@ -90,37 +87,43 @@ function SideRow({
   onPick?: () => void;
 }) {
   const bye = isByeLabel(text);
-  const baseClass = `rounded-md px-2 py-1.5 text-sm leading-snug ${
+
+  const baseClass = [
+    "rounded-lg px-2.5 py-1.5 text-sm leading-snug transition",
     bye
-      ? "border border-dashed border-zinc-300 bg-zinc-50 italic text-zinc-500 dark:border-zinc-600 dark:bg-zinc-900/40 dark:text-zinc-400"
-      : "text-zinc-900 dark:text-zinc-100"
-  } ${
-    winner
-      ? "bg-emerald-500/20 font-semibold text-emerald-900 ring-1 ring-emerald-500/30 dark:text-emerald-100"
-      : ""
-  } ${
-    loser && !bye
-      ? "opacity-65 line-through decoration-zinc-400 dark:decoration-zinc-500"
-      : ""
-  }`;
+      ? "border border-dashed border-zinc-300 bg-zinc-50 italic text-zinc-400 dark:border-zinc-600 dark:bg-zinc-900/40 dark:text-zinc-500"
+      : winner
+        ? "bg-emerald-50 font-semibold text-emerald-800 ring-1 ring-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-200 dark:ring-emerald-700"
+        : loser
+          ? "text-zinc-400 line-through decoration-zinc-300 dark:text-zinc-500"
+          : "text-zinc-800 dark:text-zinc-100",
+    editable && !bye ? "hover:ring-2 hover:ring-red-300/50 cursor-pointer" : "",
+  ].join(" ");
 
   const content = (
-    <span className="line-clamp-3 break-words">{bye ? "부전승 (상대 없음 · 자동 진행)" : text}</span>
+    <span className="flex items-center gap-1.5 break-words line-clamp-2">
+      {winner && !bye && (
+        <svg viewBox="0 0 16 16" fill="currentColor" className="h-3 w-3 shrink-0 text-emerald-600 dark:text-emerald-400">
+          <path d="M12.207 4.793a1 1 0 010 1.414l-5 5a1 1 0 01-1.414 0l-2-2a1 1 0 011.414-1.414L6.5 9.086l4.293-4.293a1 1 0 011.414 0z" />
+        </svg>
+      )}
+      {bye ? "부전승 (자동 진행)" : text}
+    </span>
   );
 
   return (
     <div className="relative">
-      {bye ? (
-        <span className="absolute -right-0.5 -top-2 rounded bg-zinc-200 px-1 text-[9px] font-bold uppercase tracking-wide text-zinc-600 dark:bg-zinc-700 dark:text-zinc-300">
-          부전승
+      {bye && (
+        <span className="absolute -right-0.5 -top-2 rounded bg-zinc-200 px-1 text-[9px] font-bold uppercase tracking-wide text-zinc-500 dark:bg-zinc-700 dark:text-zinc-400">
+          BYE
         </span>
-      ) : null}
+      )}
       {editable && onPick && !bye ? (
         <button
           type="button"
           onClick={onPick}
           title="클릭하여 이 선수를 승자로 기록"
-          className={`w-full text-left transition hover:ring-2 hover:ring-accent/40 ${baseClass}`}
+          className={`w-full text-left ${baseClass}`}
         >
           {content}
         </button>
@@ -150,14 +153,20 @@ function MatchCell({
   const w = results[k];
   const leftBye = isByeLabel(m.left);
   const rightBye = isByeLabel(m.right);
+  const hasResult = w != null;
 
   return (
     <div
-      className="flex min-h-0 flex-col rounded-xl border-2 border-zinc-200 bg-white p-3 shadow-sm dark:border-zinc-600 dark:bg-zinc-900"
+      className={[
+        "flex min-h-0 flex-col rounded-xl border bg-white p-3 dark:bg-zinc-900 transition",
+        hasResult
+          ? "border-emerald-200 shadow-sm shadow-emerald-100 dark:border-emerald-800/60 dark:shadow-none"
+          : "border-zinc-200 shadow-sm dark:border-zinc-700",
+      ].join(" ")}
       style={{ minHeight: cardMinH }}
     >
-      <p className="shrink-0 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">{m.id}</p>
-      <div className="mt-2 flex min-h-0 flex-1 flex-col justify-center gap-1">
+      <p className="shrink-0 text-[9px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">{m.id}</p>
+      <div className="mt-1.5 flex min-h-0 flex-1 flex-col justify-center gap-1">
         <SideRow
           text={m.left}
           winner={w === "left"}
@@ -165,7 +174,12 @@ function MatchCell({
           editable={editable}
           onPick={editable && onSetWinner ? () => onSetWinner(k, "left") : undefined}
         />
-        <div className="py-0.5 text-center text-[10px] font-bold text-accent">VS</div>
+        {/* VS divider */}
+        <div className="flex items-center gap-1.5 py-0.5">
+          <div className="h-px flex-1 bg-zinc-100 dark:bg-zinc-800" />
+          <span className="rounded-full bg-red-50 px-1.5 py-0.5 text-[9px] font-bold text-red-500 dark:bg-red-950/30 dark:text-red-400">VS</span>
+          <div className="h-px flex-1 bg-zinc-100 dark:bg-zinc-800" />
+        </div>
         <SideRow
           text={m.right}
           winner={w === "right"}
@@ -175,15 +189,15 @@ function MatchCell({
         />
       </div>
       {editable ? (
-        <div className="mt-2 shrink-0 border-t border-zinc-100 pt-2 dark:border-zinc-700">
-          <p className="mb-1.5 text-[10px] text-zinc-500 dark:text-zinc-400">승자: 이름을 누르세요</p>
+        <div className="mt-2 shrink-0 border-t border-zinc-100 pt-2 dark:border-zinc-800">
+          <p className="mb-1 text-[10px] text-zinc-400 dark:text-zinc-500">이름을 눌러 승자 기록</p>
           {w != null ? (
             <button
               type="button"
               onClick={() => onSetWinner?.(k, null)}
-              className="rounded border border-zinc-200 px-2 py-0.5 text-[11px] text-zinc-600 hover:bg-zinc-50 dark:border-zinc-600 dark:text-zinc-300 dark:hover:bg-zinc-800"
+              className="rounded-lg border border-zinc-200 px-2 py-0.5 text-[11px] text-zinc-500 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800 transition"
             >
-              이 경기 결과 초기화
+              결과 초기화
             </button>
           ) : null}
         </div>
@@ -203,15 +217,15 @@ function ConnectorColumn({
   height: number;
   width: number;
 }) {
-  const jx = Math.max(10, width * 0.42);
+  const jx = Math.max(10, width * 0.45);
   return (
     <svg
       width={width}
       height={height}
-      className="shrink-0 text-accent/55 dark:text-accent/50 print:text-zinc-700"
+      className="shrink-0 text-zinc-300 dark:text-zinc-600 print:text-zinc-400"
       aria-hidden
     >
-      <g fill="none" stroke="currentColor" strokeWidth={2.25} strokeLinejoin="miter" strokeLinecap="square">
+      <g fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinejoin="miter" strokeLinecap="round">
         {centersTo.map((yp, j) => {
           const y1 = centersFrom[2 * j];
           const y2 = centersFrom[2 * j + 1];
@@ -226,13 +240,9 @@ function ConnectorColumn({
   );
 }
 
-/**
- * 단판 토너먼트: 라운드 열 + SVG로 이전 라운드 두 경기에서 다음 라운드 한 경기로 이어지는 연결선.
- * 부전승 슬롯은 점선 테두리·라벨로 구분합니다.
- */
 export function TournamentBracketTree({ rounds, results, editable, onSetWinner }: Props) {
   const R = rounds.length;
-  const cardMinH = editable ? 152 : 118;
+  const cardMinH = editable ? 148 : 112;
   const [narrow, setNarrow] = useState(false);
 
   useEffect(() => {
@@ -246,17 +256,15 @@ export function TournamentBracketTree({ rounds, results, editable, onSetWinner }
   const colW = narrow ? COL_W_MOBILE : COL_W_DESKTOP;
   const connectorW = narrow ? CONNECTOR_W_MOBILE : CONNECTOR_W_DESKTOP;
 
-  if (R === 0) {
-    return null;
-  }
+  if (R === 0) return null;
 
   const centers = computeMatchCentersY(rounds);
   const totalH = totalBracketHeight(rounds, centers, cardMinH);
 
   return (
-    <div className="overflow-x-auto pb-4 [-webkit-overflow-scrolling:touch] print:overflow-visible">
+    <div className="overflow-x-auto pb-3 [-webkit-overflow-scrolling:touch] print:overflow-visible">
       <div
-        className="inline-flex min-w-min flex-row flex-nowrap items-stretch rounded-xl border border-zinc-100 bg-zinc-50/50 p-2 sm:p-3 dark:border-zinc-800 dark:bg-zinc-950/40 print:border-zinc-300 print:bg-white"
+        className="inline-flex min-w-min flex-row flex-nowrap items-stretch rounded-2xl border border-zinc-100 bg-zinc-50/60 p-3 dark:border-zinc-800 dark:bg-zinc-950/50 print:border-zinc-200 print:bg-white"
         style={{ minHeight: totalH }}
       >
         {rounds.map((round, r) => (
@@ -274,7 +282,7 @@ export function TournamentBracketTree({ rounds, results, editable, onSetWinner }
               style={{ width: colW, minHeight: totalH, height: totalH }}
             >
               <p
-                className="absolute left-0 right-0 top-2 z-10 text-center text-[11px] font-bold text-zinc-500 dark:text-zinc-400"
+                className="absolute left-0 right-0 top-2 z-10 text-center text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500"
                 style={{ pointerEvents: "none" }}
               >
                 {round.title}
@@ -302,9 +310,6 @@ export function TournamentBracketTree({ rounds, results, editable, onSetWinner }
           </div>
         ))}
       </div>
-      <p className="mt-2 text-center text-[11px] text-zinc-500 dark:text-zinc-400">
-        선으로 이어진 매치가 라운드를 나타냅니다. 부전승은 참가자 수가 2의 거듭제곱이 아닐 때 빈 슬롯으로 배정됩니다.
-      </p>
     </div>
   );
 }

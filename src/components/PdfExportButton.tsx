@@ -67,27 +67,27 @@ export function PdfExportButton({ fileName, targetId }: Props) {
         windowHeight: h,
         foreignObjectRendering: false,
         onclone: (clonedDoc) => {
+          // Remove dark mode so only light-mode Tailwind classes apply — preserves winner/loser highlights
+          clonedDoc.documentElement.classList.remove("dark");
           const box = clonedDoc.getElementById(targetId);
           if (!box) return;
           box.style.overflow = "visible";
           box.style.height = "auto";
           box.style.maxHeight = "none";
-          const stack: HTMLElement[] = [box];
-          while (stack.length) {
-            const n = stack.pop()!;
-            n.style.fontFamily = 'system-ui, "Segoe UI", sans-serif';
-            n.style.boxShadow = "none";
-            n.style.setProperty("background-color", "#ffffff", "important");
-            n.style.setProperty("color", "#18181b", "important");
-            n.style.setProperty("border-color", "#d4d4d8", "important");
-            if (n instanceof HTMLElement && n.classList.contains("overflow-x-auto")) {
-              n.style.overflow = "visible";
+          box.style.backgroundColor = "#ffffff";
+          // Fix scrollable/clipped containers so nothing is cut off
+          const allEls = box.querySelectorAll<HTMLElement>("*");
+          allEls.forEach((el) => {
+            el.style.fontFamily = 'system-ui, "Segoe UI", sans-serif';
+            el.style.boxShadow = "none";
+            const ov = el.style.overflow || window.getComputedStyle(el).overflow;
+            if (ov === "hidden" || ov === "scroll" || ov === "auto" ||
+                el.classList.contains("overflow-x-auto") ||
+                el.classList.contains("overflow-y-auto") ||
+                el.classList.contains("overflow-hidden")) {
+              el.style.overflow = "visible";
             }
-            for (let i = 0; i < n.children.length; i++) {
-              const c = n.children[i];
-              if (c instanceof HTMLElement) stack.push(c);
-            }
-          }
+          });
         },
       });
 
@@ -117,9 +117,25 @@ export function PdfExportButton({ fileName, targetId }: Props) {
       type="button"
       onClick={() => void download()}
       disabled={busy}
-      className="min-h-11 w-full rounded-lg bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-60 sm:min-h-0 sm:w-auto dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"
+      className="inline-flex items-center gap-2 rounded-xl border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-700 shadow-sm hover:bg-zinc-50 disabled:opacity-60 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700 transition"
     >
-      {busy ? "PDF 생성 중…" : "PDF로 다운로드"}
+      {busy ? (
+        <>
+          <span className="h-3.5 w-3.5 rounded-full border-2 border-zinc-400 border-t-transparent animate-spin" />
+          PDF 생성 중…
+        </>
+      ) : (
+        <>
+          <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+            <polyline points="14 2 14 8 20 8" />
+            <line x1="16" y1="13" x2="8" y2="13" />
+            <line x1="16" y1="17" x2="8" y2="17" />
+            <polyline points="10 9 9 9 8 9" />
+          </svg>
+          PDF 다운로드
+        </>
+      )}
     </button>
   );
 }
